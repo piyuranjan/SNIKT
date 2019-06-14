@@ -74,18 +74,22 @@ AreaPlot<-function(df,zoomLen=NULL)
 	
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area()+ #area plot
+	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8) #avg Phred score
 		# theme_bw()+ #remove grey background
-		geom_line(aes(y=avgQ),alpha=0.8) #avg Phred score; black by default
 	
 	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
-		ap<-ap+geom_line(aes(y=bases/max(bases)*100),color="red")+ #make normalized length freq as line
+		ap<-ap+geom_line(aes(y=bases/max(bases)*100),color="red")+ #make normalized length freq as line   #"Nucleotide\nPer\nPosition"
 			scale_y_continuous(sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
-			theme(axis.line.y.right=element_line(color="red"),axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red")) #changes secondary (right) axis line, ticks, text to red
+		  theme(axis.line.y.right=element_line(color="red"),axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
+		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
+		  guides(fill=guide_legend(title=NULL,order=1),color=guide_legend(order=2)) #enforce legends appearing in consistent order
+		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
 		}
 	
-	ap<-ap+theme(title=element_blank(),legend.position="none") #remove all title elements and legend
-	return(ap)
+	ap<-ap+scale_color_manual(values="black")+ #fix avqQ to black
+	  theme(title=element_blank(),legend.position="none") #remove all title elements and legend from zoom plot
+	return(ap) #return zoom plot
 	}
 
 
@@ -127,6 +131,14 @@ rawComp4nt$nt<-factor(rawComp4nt$nt,levels=c("A","G","C","T","N")) #setting the 
 areaRawComp4nt<-AreaPlot(rawComp4nt) #plotting full area graph with 4 nt
 rawComp2nt<-gather(rawComp,key=nt,value=composition,c(AT,GC,N)) #reorders AT, GC in long format for ggplot
 areaRawComp2nt<-AreaPlot(rawComp2nt) #plotting full area graph with combination compositions
+
+## Extract legends, then remove from plots
+nt4Grob<-ggplotGrob(areaRawComp4nt)$grobs
+nt2Grob<-ggplotGrob(areaRawComp2nt)$grobs
+nt4Leg<-nt4Grob[[which(map_chr(nt4Grob,function(x) x$name)=="guide-box")]]
+nt2Leg<-nt2Grob[[which(map_chr(nt2Grob,function(x) x$name)=="guide-box")]]
+areaRawComp4nt<-areaRawComp4nt+theme(title=element_blank(),legend.position="none")
+areaRawComp2nt<-areaRawComp2nt+theme(title=element_blank(),legend.position="none")
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Forward full compositions calculated and graphed\n",sep="")}
 
 ## Process 5' end compositions for left zoomed-in plots
@@ -155,16 +167,13 @@ centerPlots<-arrangeGrob(areaRawComp4nt,areaRawComp2nt,ncol=1,
 						right=textGrob(label="Read frequency (NT per position)",rot=90,gp=gpar(fontface=2,fontsize=14,col="red")))
 rightPlots<-arrangeGrob(areaRevComp4ntZoom3,areaRevComp2ntZoom3,ncol=1,
 						top=textGrob("Aligned 3' ending",gp=gpar(fontface=2,fontsize=14)))
-areaArranged<-grid.arrange(leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1),
+areaArranged<-arrangeGrob(leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1),
 							top=textGrob(label="Main Title",gp=gpar(fontface=2,fontsize=20)),
 							left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=20)),
 							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=20)))
-# areaArranged<-grid.arrange(areaRawComp4ntZoom5,areaRawComp4nt,areaRevComp4ntZoom3,areaRawComp2ntZoom5,areaRawComp2nt,areaRevComp2ntZoom3,nrow=2,ncol=3)
-# centerPlots<-grid.arrange(areaRawComp4nt,areaRawComp2nt,ncol=1,top=textGrob(label="Aligned 5', length 1-XX nt"))
-# leftPlots<-grid.arrange(areaRawComp4ntZoom5,areaRawComp2ntZoom5,ncol=1,top=textGrob(label="Aligned 5\' end"))
-# rightPlots<-grid.arrange(areaRevComp4ntZoom3,areaRevComp2ntZoom3,ncol=1,top=textGrob(label="Aligned 3\' end"))
+finalPlotGrid<-grid.arrange(areaArranged,arrangeGrob(nt4Leg,nt2Leg),ncol=2,widths=c(28,2))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] All graphs prepared in grid\n",sep="")}
 
 ## Export graphs to file
-ggsave(outFile,plot=areaArranged,height=200,width=400,units="mm")
+ggsave(outFile,plot=finalPlotGrid,height=200,width=400,units="mm")
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Graph grid written to file\n",sep="")}
