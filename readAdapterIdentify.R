@@ -79,7 +79,7 @@ AreaPlot<-function(df,zoomLen=NULL)
 	
 	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
-		ap<-ap+geom_line(aes(y=bases/max(bases)*100),color="red")+ #make normalized length freq as line   #"Nucleotide\nPer\nPosition"
+		ap<-ap+geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
 			scale_y_continuous(sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
 		  theme(axis.line.y.right=element_line(color="red"),axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
@@ -168,7 +168,7 @@ centerPlots<-arrangeGrob(areaRawComp4nt,areaRawComp2nt,ncol=1,
 rightPlots<-arrangeGrob(areaRevComp4ntZoom3,areaRevComp2ntZoom3,ncol=1,
 						top=textGrob("Aligned 3' ending",gp=gpar(fontface=2,fontsize=14)))
 areaArranged<-arrangeGrob(leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1),
-							top=textGrob(label="Main Title",gp=gpar(fontface=2,fontsize=20)),
+							top=textGrob(label="Sequence Representation Per Position",gp=gpar(fontface=2,fontsize=20)),
 							left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=20)),
 							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=20)))
 finalPlotGrid<-grid.arrange(areaArranged,arrangeGrob(nt4Leg,nt2Leg),ncol=2,widths=c(28,2))
