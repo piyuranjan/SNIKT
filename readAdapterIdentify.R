@@ -174,8 +174,8 @@ rightPlots<-arrangeGrob(areaRevComp4ntZoom3,areaRevComp2ntZoom3,ncol=1,
 						top=textGrob("Aligned 3' ending",gp=gpar(fontface=2,fontsize=14)))
 areaArranged<-arrangeGrob(leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1),
 							top=textGrob(label="Sequence Representation Per Position",gp=gpar(fontface=2,fontsize=20)),
-							left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=20)),
-							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=20)))
+							left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=14)),
+							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=14)))
 finalPlotGrid<-grid.arrange(areaArranged,arrangeGrob(nt4Leg,nt2Leg),ncol=2,widths=c(28,2))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] All graphs prepared in grid\n",sep="")}
 

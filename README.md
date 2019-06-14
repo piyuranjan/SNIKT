@@ -4,7 +4,14 @@ Identify adapter/systemic contamination in metagenomic sequencing DNA/RNA data.
 ### Dependencies
 seqtk >= 1.3 [https://github.com/lh3/seqtk](https://github.com/lh3/seqtk)
 
-R >= 3.5.1 [https://www.r-project.org/](https://www.r-project.org/) [direct download](https://cloud.r-project.org/)
+R >= 3.5.1 [https://www.r-project.org/](https://www.r-project.org/) [direct download](https://cloud.r-project.org/)  
+
+Libraries:
+- tidyverse
+- grid
+- gridExtra
+- argparser
+- lubridate
 
 ### Command line help and usage
 ```
