@@ -115,7 +115,6 @@ if(!file.exists(args$fastq)){stop("Need a sequence file to proceed. See help wit
   if(file.exists("Rplots.pdf")) #renaming any preexisting Rplots.pdf so that it doesn't overwrite
   {invisible(file.rename("Rplots.pdf",paste0("Rplots_",str_replace_all(Sys.time(),"[-:]|\\h+",""),".pdf")))}
 
-
 ## Associating user flags with variables
 seqFile<-args$fastq
 percentFilter<-args$filter #percent bases to filter until; parameter that avoids rendering noise at the end
