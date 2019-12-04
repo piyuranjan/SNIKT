@@ -62,9 +62,16 @@ ComputeComp<-function(seqFile,percentFilter=0.005,revComp=F)
 	numFilter<-maxBases*percentFilter #number of base positions to subset until, avoids rendering noise at the end
 	df<-dplyr::filter(df,bases>=numFilter) #remove low confidence compositions by filtering the long tail
 	df<-mutate(df,AT=A+T,GC=G+C) #add paired AT and GC compositions
-	}
+}
 
-AreaPlot<-function(df,zoomLen=NULL)
+ComputeTrim<-function(df,zoomLen)
+{
+  ## This function is a work in progress. Determine an algorithm to compute the Trim threshold.
+  trim<-max(which(df[0:(zoomLen/2), "avgQ"] < mean(df[300:500,]$avgQ))) + 1
+  return(trim)
+}
+
+AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
 	{
 	## This function makes an area plot for given compositions per position
 	## adds average base quality and sequence length distribution for full length plots
@@ -76,6 +83,8 @@ AreaPlot<-function(df,zoomLen=NULL)
 		geom_area()+ #area plot
 	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8)+ #avg Phred score
 	  scale_y_continuous(expand=c(0,0)) # remove top/bottom grey plot padding
+	
+	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} # add dashed vertical line at the suggested trim position
 	
 	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
@@ -154,8 +163,8 @@ areaRawComp2nt<-areaRawComp2nt+theme(title=element_blank(),legend.position="none
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Forward full compositions calculated and graphed\n",sep="")}
 
 ## Process 5' end compositions for left zoomed-in plots
-areaRawComp4ntZoom5<-AreaPlot(rawComp4nt,zoom5Len)
-areaRawComp2ntZoom5<-AreaPlot(rawComp2nt,zoom5Len)
+areaRawComp4ntZoom5<-AreaPlot(rawComp4nt,zoom5Len,ComputeTrim(rawComp4nt,zoom5Len))
+areaRawComp2ntZoom5<-AreaPlot(rawComp2nt,zoom5Len,ComputeTrim(rawComp2nt,zoom5Len))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Forward zoomed compositions calculated and graphed\n",sep="")}
 
 ## Process reverse complement compositions for right zoomed-in plots
@@ -163,9 +172,9 @@ if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"
 revComp<-ComputeComp(seqFile,percentFilter,revComp=T)
 revComp4nt<-gather(revComp,key=nt,value=composition,c(A,T,G,C,N)) #gathers, reorders nt in long format to use with ggplot
 revComp4nt$nt<-factor(revComp4nt$nt,levels=c("A","G","C","T","N")) #setting the order for nucleotide cols
-areaRevComp4ntZoom3<-AreaPlot(revComp4nt,zoom3Len)
+areaRevComp4ntZoom3<-AreaPlot(revComp4nt,zoom3Len,ComputeTrim(revComp4nt,zoom3Len))
 revComp2nt<-gather(revComp,key=nt,value=composition,c(AT,GC,N)) #reorders AT, GC in long format for ggplot
-areaRevComp2ntZoom3<-AreaPlot(revComp2nt,zoom3Len)
+areaRevComp2ntZoom3<-AreaPlot(revComp2nt,zoom3Len,ComputeTrim(revComp2nt,zoom3Len))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Reverse zoomed compositons calculated and graphed\n",sep="")}
 
 ### Exporting graphs in figure
