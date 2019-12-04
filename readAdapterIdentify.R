@@ -81,7 +81,7 @@ AreaPlot<-function(df,zoomLen=NULL)
 		{
 		ap<-ap+geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
 			scale_y_continuous(sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
-		  theme(axis.line.y.right=element_line(color="red"),axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
+		  theme(axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
 		  guides(fill=guide_legend(title=NULL,order=1),color=guide_legend(order=2)) #enforce legends appearing in consistent order
 		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
