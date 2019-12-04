@@ -74,18 +74,26 @@ AreaPlot<-function(df,zoomLen=NULL)
 	
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area()+ #area plot
-	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8) #avg Phred score
-		# theme_bw()+ #remove grey background
+	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8)+ #avg Phred score
+	  scale_y_continuous(expand=c(0,0)) # remove top/bottom grey plot padding
 	
 	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
 		ap<-ap+geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
-			scale_y_continuous(sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
+			scale_y_continuous(sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"), expand=c(0,0))+ #rev-norm freq for axis
+		  scale_x_continuous(expand=c(0,0))+ # remove left/right grey plot padding
 		  theme(axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
 		  guides(fill=guide_legend(title=NULL,order=1),color=guide_legend(order=2)) #enforce legends appearing in consistent order
 		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
 		}
+	
+	# positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
+	if(deparse(substitute(zoomLen))=="zoom3Len") {
+	  ap<-ap+scale_x_continuous(expand=c(0,0)) # remove left/right grey plot padding
+	} else {
+	  ap<-ap+scale_x_reverse(expand=c(0,0)) # reverse x-axis, remove left/right grey plot padding
+	}
 	
 	ap<-ap+scale_color_manual(values="black")+ #fix avqQ to black
 	  theme(title=element_blank(),legend.position="none") #remove all title elements and legend from zoom plot
@@ -156,10 +164,10 @@ revComp<-ComputeComp(seqFile,percentFilter,revComp=T)
 revComp4nt<-gather(revComp,key=nt,value=composition,c(A,T,G,C,N)) #gathers, reorders nt in long format to use with ggplot
 revComp4nt$nt<-factor(revComp4nt$nt,levels=c("A","G","C","T","N")) #setting the order for nucleotide cols
 areaRevComp4ntZoom3<-AreaPlot(revComp4nt,zoom3Len)
-areaRevComp4ntZoom3<-areaRevComp4ntZoom3+scale_x_reverse()
+areaRevComp4ntZoom3<-areaRevComp4ntZoom3
 revComp2nt<-gather(revComp,key=nt,value=composition,c(AT,GC,N)) #reorders AT, GC in long format for ggplot
 areaRevComp2ntZoom3<-AreaPlot(revComp2nt,zoom3Len)
-areaRevComp2ntZoom3<-areaRevComp2ntZoom3+scale_x_reverse()
+areaRevComp2ntZoom3<-areaRevComp2ntZoom3
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Reverse zoomed compositons calculated and graphed\n",sep="")}
 
 ### Exporting graphs in figure
