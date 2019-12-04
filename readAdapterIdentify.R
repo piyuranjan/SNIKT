@@ -89,7 +89,7 @@ AreaPlot<-function(df,zoomLen=NULL)
 		}
 	
 	# positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
-	if(deparse(substitute(zoomLen))=="zoom3Len") {
+	if(deparse(substitute(zoomLen))=="zoom5Len") {
 	  ap<-ap+scale_x_continuous(expand=c(0,0)) # remove left/right grey plot padding
 	} else {
 	  ap<-ap+scale_x_reverse(expand=c(0,0)) # reverse x-axis, remove left/right grey plot padding
