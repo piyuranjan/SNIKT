@@ -164,10 +164,8 @@ revComp<-ComputeComp(seqFile,percentFilter,revComp=T)
 revComp4nt<-gather(revComp,key=nt,value=composition,c(A,T,G,C,N)) #gathers, reorders nt in long format to use with ggplot
 revComp4nt$nt<-factor(revComp4nt$nt,levels=c("A","G","C","T","N")) #setting the order for nucleotide cols
 areaRevComp4ntZoom3<-AreaPlot(revComp4nt,zoom3Len)
-areaRevComp4ntZoom3<-areaRevComp4ntZoom3
 revComp2nt<-gather(revComp,key=nt,value=composition,c(AT,GC,N)) #reorders AT, GC in long format for ggplot
 areaRevComp2ntZoom3<-AreaPlot(revComp2nt,zoom3Len)
-areaRevComp2ntZoom3<-areaRevComp2ntZoom3
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Reverse zoomed compositons calculated and graphed\n",sep="")}
 
 ### Exporting graphs in figure
