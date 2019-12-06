@@ -82,7 +82,7 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area()+ #area plot
 	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8)+ #avg Phred score
-	  scale_y_continuous(expand=c(0,0)) # remove top/bottom grey plot padding
+	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0,0)) # add % label, remove top/bottom grey plot padding
 	
 	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} # add dashed vertical line at the suggested trim position
 	
