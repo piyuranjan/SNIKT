@@ -81,16 +81,17 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
 	
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area()+ #area plot
-	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8) #avg Phred score
+	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8)+ #avg Phred score
+	  theme_bw() #remove grey background
 	
 	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} # add dashed vertical line at the suggested trim position
 	
 	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
 		ap<-ap+geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
-			scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0,0), #add % label, remove top/bot plot padding
+			scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0.01,0), #add % label, remove top/bot plot padding
 			                   sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
-		  scale_x_continuous(expand=c(0,0))+ # remove left/right grey plot padding
+		  scale_x_continuous(expand=c(0.01,0))+ # remove left/right grey plot padding
 		  theme(axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
 		        axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
@@ -100,13 +101,13 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
 	
 	# positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
 	if(deparse(substitute(zoomLen))=="zoom5Len") {
-	  ap<-ap+scale_x_continuous(expand=c(0,0)) # remove left/right grey plot padding
+	  ap<-ap+scale_x_continuous(expand=c(0.01,0)) # remove left/right grey plot padding
 	} else {
-	  ap<-ap+scale_x_reverse(expand=c(0,0)) # reverse x-axis, remove left/right grey plot padding
+	  ap<-ap+scale_x_reverse(expand=c(0.01,0)) # reverse x-axis, remove left/right grey plot padding
 	}
 	
 	ap<-ap+scale_color_manual(values="black")+ #fix avqQ to black
-	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0,0))+ # add % label, remove top/bottom grey plot padding
+	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0.01,0))+ # add % label, remove top/bottom grey plot padding
 	  theme(title=element_blank(),legend.position="none",axis.line=element_line(color="black")) #remove all title elements, legend from zoom plot. add left/bot axis lines
 	return(ap) #return zoom plot
 	}
