@@ -71,7 +71,7 @@ ComputeTrim<-function(df,zoomLen)
   return(trim)
 }
 
-AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
+AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	{
 	## This function makes an area plot for given compositions per position
 	## adds average base quality and sequence length distribution for full length plots
@@ -89,9 +89,9 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
 	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
 		ap<-ap+geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
-			scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0.01,0), #add % label, remove top/bot plot padding
+			scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0), #add % label, adjust top/bot plot padding
 			                   sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
-		  scale_x_continuous(expand=c(0.01,0))+ # remove left/right grey plot padding
+		  scale_x_continuous(expand=c(pad,0))+ # adjust left/right plot padding
 		  theme(axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
 		        axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
@@ -101,13 +101,13 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL)
 	
 	# positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
 	if(deparse(substitute(zoomLen))=="zoom5Len") {
-	  ap<-ap+scale_x_continuous(expand=c(0.01,0)) # remove left/right grey plot padding
+	  ap<-ap+scale_x_continuous(expand=c(pad,0)) # adjust left/right plot padding
 	} else {
-	  ap<-ap+scale_x_reverse(expand=c(0.01,0)) # reverse x-axis, remove left/right grey plot padding
+	  ap<-ap+scale_x_reverse(expand=c(pad,0)) # reverse x-axis, adjust left/right plot padding
 	}
 	
 	ap<-ap+scale_color_manual(values="black")+ #fix avqQ to black
-	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(0.01,0))+ # add % label, remove top/bottom grey plot padding
+	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0))+ # add % label, adjust top/bottom plot padding
 	  theme(title=element_blank(),legend.position="none",axis.line=element_line(color="black")) #remove all title elements, legend from zoom plot. add left/bot axis lines
 	return(ap) #return zoom plot
 	}
