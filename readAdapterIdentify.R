@@ -80,8 +80,8 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	if(!is.null(zoomLen)){df<-dplyr::filter(df,POS<=zoomLen)} #subsetting condition to follow for zoom plots
 	
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
-		geom_area()+ #area plot
-	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.8)+ #avg Phred score
+		geom_area(alpha=0.75)+ #area plot; lowered alpha to see gridlines
+	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.75)+ #avg Phred score
 	  theme_bw() #remove grey background
 	
 	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} # add dashed vertical line at the suggested trim position
