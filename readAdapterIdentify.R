@@ -79,6 +79,29 @@ ComputeTrim<-function(df,zoomLen)
 	return(trim)
 	}
 
+format_si <- function(...) {
+  # source: https://www.moeding.net/2011/10/metric-prefixes-for-ggplot2-scales/
+  # Format a vector of numeric values according to the International System of Units.
+  # http://en.wikipedia.org/wiki/SI_prefix
+  #
+  # Based on code by Ben Tupper: https://stat.ethz.ch/pipermail/r-help/2012-January/299804.html
+  # Args: ...: Args passed to format()
+  #
+  # Returns: A function to format a vector of strings using SI prefix notation
+  
+  function(x) {
+    limits <- c(1e-24, 1e-21, 1e-18, 1e-15, 1e-12, 1e-9, 1e-6, 1e-3, 1e0, 1e3, 1e6, 1e9, 1e12, 1e15, 1e18, 1e21, 1e24)
+    prefix <- c("y", "z", "a",  "f", "p", "n", "µ",  "m",   "",  "K", "M",  "G",  "T",  "P",  "E", "Z", "Y")
+    
+    # Vector with array indices according to position in intervals
+    i<-findInterval(abs(x),limits)
+    
+    # Set prefix to " " for very small values < 1e-24
+    i<-ifelse(i==0,which(limits==1e0),i)
+    paste(format(round(x/limits[i],1),trim=TRUE,scientific=FALSE,...),prefix[i])
+  }
+}
+
 AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	{
 	### This function makes an area plot for given compositions per position
@@ -90,18 +113,21 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area(alpha=0.75)+ #area plot; lowered alpha to see gridlines
 		geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.75)+ #avg Phred score
-		theme_bw() #remove grey background
+	  geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
+	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0), #add % label, adjust top/bot plot padding
+      sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency",labels=format_si()))+ #secondary axis uses SI scale
+		theme_bw()+ #remove grey background
+	  theme(title=element_blank(),axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
+      axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red")) #change sec axis line, ticks, text to red
 	
-	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} # add dashed vertical line at the suggested trim position
-	
-	if(is.null(zoomLen)) #condition to skip for zoom plots
+	if(is.null(zoomLen)) #condition to skip for zoom plots ## remove commented code in future version
 		{
-		ap<-ap+geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
-			scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0), #add % label, adjust top/bot plot padding
-			                   sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
+		ap<-ap+#geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
+			# scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0), #add % label, adjust top/bot plot padding
+			                   # sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
 		  scale_x_continuous(expand=c(pad,0))+ # adjust left/right plot padding
-		  theme(axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
-		        axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
+		  # theme(axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
+		    # axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
 		  guides(fill=guide_legend(title=NULL,order=1),color=guide_legend(order=2)) #enforce legends appearing in consistent order
 		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
@@ -114,9 +140,12 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	  ap<-ap+scale_x_reverse(expand=c(pad,0)) # reverse x-axis, adjust left/right plot padding
 	}
 	
-	ap<-ap+scale_color_manual(values="black")+ #fix avqQ to black
-	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0))+ # add % label, adjust top/bottom plot padding
-	  theme(title=element_blank(),legend.position="none",axis.line=element_line(color="black")) #remove all title elements, legend from zoom plot. add left/bot axis lines
+	ap<-ap+scale_color_manual(values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #fix avqQ to black
+	  # scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0))+ # add % label, adjust top/bottom plot padding
+	  theme(legend.position="none") #remove all title elements, legend from zoom plot. add left/bot axis lines
+	
+	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} #add dashed vertical line at trim position
+	
 	return(ap) #return zoom plot
 	}
 
@@ -176,8 +205,8 @@ nt4Grob<-ggplotGrob(areaRawComp4nt)$grobs
 nt2Grob<-ggplotGrob(areaRawComp2nt)$grobs
 nt4Leg<-nt4Grob[[which(map_chr(nt4Grob,function(x) x$name)=="guide-box")]]
 nt2Leg<-nt2Grob[[which(map_chr(nt2Grob,function(x) x$name)=="guide-box")]]
-areaRawComp4nt<-areaRawComp4nt+theme(title=element_blank(),legend.position="none")
-areaRawComp2nt<-areaRawComp2nt+theme(title=element_blank(),legend.position="none")
+areaRawComp4nt<-areaRawComp4nt+theme(legend.position="none")
+areaRawComp2nt<-areaRawComp2nt+theme(legend.position="none")
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Forward full compositions calculated and graphed\n",sep="")}
 
 ## Process 5' end compositions for left zoomed-in plots
