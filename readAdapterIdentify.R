@@ -1,5 +1,13 @@
 #!/usr/bin/env Rscript
 
+## Commenting suggestions ##
+## Section headers like this ##
+## Content headers like this
+### Full-line comment like this
+### and can continue on second line like this
+###   or this
+#x<-as.numeric(y); #inline comment like this
+
 startTime<-Sys.time()
 packages<-c("tidyverse","grid","gridExtra","argparser","lubridate")
 tmp<-lapply(packages,function(x) suppressPackageStartupMessages(require(x,character.only=T)))
@@ -7,9 +15,9 @@ tmp<-lapply(packages,function(x) suppressPackageStartupMessages(require(x,charac
 
 ArgParser2<-function(description,name=NULL) 
 	{
-	## This function is borrowed from the arg_parser() function of the argparser library
-	## creates an arg_parser object with modifications. For original functionality check ?arg_parser
-	## options -- and --opts are commented in this section for their exclusion from the help document
+	### This function is borrowed from the arg_parser() function of the argparser library
+	### that creates an arg_parser object with modifications. For original functionality check ?arg_parser
+	### options -- and --opts are commented in this section for their exclusion from the help document
 	if(is.null(name))
 		{
 		prefix<-"--file="
@@ -25,9 +33,9 @@ ArgParser2<-function(description,name=NULL)
 
 Preprocess<-function(compFile,percentFilter=0.005) #This function is deprecated and will be removed in a future commit
 	{
-	## This function stores nucleotide composition per base data from a file in a data frame
-	## subsets the data frame by a user given threshold to remove long tail, which is often extremely noisy
-	## adds AT, GC columns to it
+	### This function stores nucleotide composition per base data from a file in a data frame
+	### subsets the data frame by a user given threshold to remove long tail, which is often extremely noisy
+	### adds AT, GC columns to it
 	# maxBases<-read_delim(compFile,"\t",skip=3,n_max=1)[,2]
 	maxBases<-as.numeric(read_delim(compFile,"\t",skip=1,n_max=1)[,2])
 	numFilter<-maxBases*percentFilter #number of base positions to subset until, avoids rendering noise at the end
@@ -40,10 +48,10 @@ Preprocess<-function(compFile,percentFilter=0.005) #This function is deprecated 
 
 ComputeComp<-function(seqFile,percentFilter=0.005,revComp=F)
 	{
-	## This function computes nucleotide composition per base using the program seqtk
-	## stores the compositions in a data frame
-	## subsets the data frame by a user given threshold to remove long tail, which is often extremely noisy
-	## adds AT, GC columns to it
+	### This function computes nucleotide composition per base using the program seqtk
+	### stores the compositions in a data frame
+	### subsets the data frame by a user given threshold to remove long tail, which is often extremely noisy
+	### adds AT, GC columns to it
 	
 	## Prepare command and execute seqtk
 	if(revComp==F) #compute forward 5' aligned compositions
@@ -62,27 +70,27 @@ ComputeComp<-function(seqFile,percentFilter=0.005,revComp=F)
 	numFilter<-maxBases*percentFilter #number of base positions to subset until, avoids rendering noise at the end
 	df<-dplyr::filter(df,bases>=numFilter) #remove low confidence compositions by filtering the long tail
 	df<-mutate(df,AT=A+T,GC=G+C) #add paired AT and GC compositions
-}
+	}
 
 ComputeTrim<-function(df,zoomLen)
-{
-  ## This function is a work in progress. Determine an algorithm to compute the Trim threshold.
-  trim<-max(which(df[0:(zoomLen/2), "avgQ"] < mean(df[300:500,]$avgQ))) + 1
-  return(trim)
-}
+	{
+	### This function is a work in progress. Determine an algorithm to compute the Trim threshold.
+	trim<-max(which(df[0:(zoomLen/2), "avgQ"] < mean(df[300:500,]$avgQ))) + 1
+	return(trim)
+	}
 
 AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	{
-	## This function makes an area plot for given compositions per position
-	## adds average base quality and sequence length distribution for full length plots
-	## subsets data frame for zoomed plots
+	### This function makes an area plot for given compositions per position
+	### adds average base quality and sequence length distribution for full length plots
+	### subsets data frame for zoomed plots
 	
 	if(!is.null(zoomLen)){df<-dplyr::filter(df,POS<=zoomLen)} #subsetting condition to follow for zoom plots
 	
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area(alpha=0.75)+ #area plot; lowered alpha to see gridlines
-	  geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.75)+ #avg Phred score
-	  theme_bw() #remove grey background
+		geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.75)+ #avg Phred score
+		theme_bw() #remove grey background
 	
 	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} # add dashed vertical line at the suggested trim position
 	
@@ -99,7 +107,7 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
 		}
 	
-	# positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
+	### positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
 	if(deparse(substitute(zoomLen))=="zoom5Len") {
 	  ap<-ap+scale_x_continuous(expand=c(pad,0)) # adjust left/right plot padding
 	} else {
@@ -112,31 +120,38 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	return(ap) #return zoom plot
 	}
 
+##########
+## Main ##
+##########
 
-#### Main ####
-
-## Status message that records time for libraries to load. Feel free to uncomment the following line if you want to see it.
+### Status message that records time for libraries to load. Feel free to uncomment the following line if you want to see it.
 # cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Libraries loaded\n",sep="")
 
-### User defined parameters
+## User defined parameter parsing ##
 
 ## Defining and reading in user arguments
 args<-ArgParser2("FastQ QC and sequence over-representation check. \nCalculate and plot per-position nucleotide composition, for finding \nadapter contamination/over-representation in sequences. \nAuthors: Piyush Ranjan, Christopher Brown\n\nFor more info, please check: https://github.com/piyuranjan/MetagenomeAdapterIdentify") #defines the arg_parser object
 args<-add_argument(args,"fastq","FastQ file for composition analysis; required",default=NULL)
+args<-add_argument(args,"--noTrim","Disable positional trimming; useful for short-read data",flag=T,type="logical",short="-n")
+args<-add_argument(args,"--trim5Len","[1..(maxSeqLen-trim3Len)] NT to trim from aligned 5' side; interactive mode if unset",type="numeric",short="-t5")
+args<-add_argument(args,"--trim3Len","[1..(maxSeqLen-trim5Len)] NT to trim from aligned 3' side; interactive mode if unset",type="numeric",short="-t3")
 args<-add_argument(args,"--filter","[0..1] Filter the composition tail by a fraction",default=0.005,short="-f")
 args<-add_argument(args,"--bzoom","[1..maxSeqLen] NT to zoom in from aligned 5' begin",default=300,short="-b")
 args<-add_argument(args,"--ezoom","[1..maxSeqLen] NT to zoom in from aligned 3' end",default=100,short="-e")
 args<-add_argument(args,"--outfile","[file.ext] File for saving graphs [default: fastqNoExt-fastqCompositions.png]",short="-o")
-args<-add_argument(args,"--verbose","Enable status messages",flag=T,default=F,short="-v")
+args<-add_argument(args,"--verbose","Enable status messages",flag=T,type="logical",short="-v")
 args<-parse_args(args,argv=commandArgs(trailingOnly=T))
 if(!file.exists(args$fastq)){stop("Need a sequence file to proceed. See help with -h.")} #condition to kill if no seqFile
 
-## Resolving bug regarding generation of Rplots.pdf
-  if(file.exists("Rplots.pdf")) #renaming any preexisting Rplots.pdf so that it doesn't overwrite
-  {invisible(file.rename("Rplots.pdf",paste0("Rplots_",str_replace_all(Sys.time(),"[-:]|\\h+",""),".pdf")))}
+### Resolving bug regarding generation of Rplots.pdf
+if(file.exists("Rplots.pdf")) #renaming any preexisting Rplots.pdf so that it doesn't overwrite
+	{invisible(file.rename("Rplots.pdf",paste0("Rplots_",str_replace_all(Sys.time(),"[-:]|\\h+",""),".pdf")))}
 
 ## Associating user flags with variables
 seqFile<-args$fastq
+noTrim<-args$noTrim
+trim5Len<-args$trim5Len
+trim3Len<-args$trim3Len
 percentFilter<-args$filter #percent bases to filter until; parameter that avoids rendering noise at the end
 zoom5Len<-args$bzoom
 zoom3Len<-args$ezoom
@@ -145,7 +160,7 @@ outFile<-sub("\\.f[ast]{0,3}(a|q)(\\.gz)?","-fast\\1Compositions.png",seqFile,pe
 if(!is.na(args$outfile)){outFile<-args$outfile} #override filename if supplied by user
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Libraries loaded and user parameters set\n",sep="")}
 
-### Compute nucleotide compositions, quality estimates and generate plots
+## Compute nucleotide compositions, quality estimates and generate plots ##
 
 ## Process regular full base compositions for center plots
 # rawComp<-Preprocess(rawQualFile,percentFilter) #sending to function for file reading
@@ -180,7 +195,7 @@ revComp2nt<-gather(revComp,key=nt,value=composition,c(AT,GC,N)) #reorders AT, GC
 areaRevComp2ntZoom3<-AreaPlot(revComp2nt,zoom3Len,ComputeTrim(revComp2nt,zoom3Len))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Reverse zoomed compositons calculated and graphed\n",sep="")}
 
-### Exporting graphs in figure
+## Export graphs in figure ##
 
 ## Setting graphs in grids
 leftPlots<-arrangeGrob(areaRawComp4ntZoom5,areaRawComp2ntZoom5,ncol=1,top=textGrob("Aligned 5' beginning",gp=gpar(fontface=2,fontsize=14)))
@@ -198,7 +213,7 @@ if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"
 
 ## Export graphs to file
 ggsave(outFile,plot=finalPlotGrid,height=200,width=400,units="mm")
-#remove extra Rplots.pdf if generated by this instance; relates to a bug
+### Remove extra Rplots.pdf if generated by this instance; relates to a bug
 if(file.exists("Rplots.pdf")){invisible(file.remove("Rplots.pdf"))}
 
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Graph grid written to file\n",sep="")}
