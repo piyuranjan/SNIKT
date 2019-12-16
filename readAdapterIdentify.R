@@ -112,13 +112,14 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	
 	ap<-ggplot(df,aes(x=POS,y=composition,fill=nt))+
 		geom_area(alpha=0.75)+ #area plot; lowered alpha to see gridlines
-		geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.75)+ #avg Phred score
-	  geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
+		geom_line(aes(y=avgQ),color="black",alpha=0.75)+ #avg Phred score
+	  geom_line(aes(y=bases/max(bases)*100),color="red")+ #make normalized length freq as line
 	  scale_y_continuous(labels=c(0,25,50,75,100),expand=c(pad,0), #adjust top/bot plot padding
       sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency",labels=format_si()))+ #secondary axis uses SI scale
 		theme_bw()+ #remove grey background
-	  theme(title=element_blank(),axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
-      axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red")) #change sec axis line, ticks, text to red
+	  theme(legend.position="none",title=element_blank(),axis.line=element_line(color="black"), #remove legend & titles; set axis colors
+	     axis.line.y.right=element_line(color="red"),axis.ticks.y.right=element_line(color="red"),
+	     axis.text.y.right=element_text(color="red"))
 	
 	# set fill colors for 4NT
 	if(length(unique(df$nt))==5) {
@@ -127,30 +128,18 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	  ap<-ap+scale_fill_manual(values=c("#00274C","#FFCB05","#E76BF3")) # "AT", "GC", "N"
 	}
 	
-	if(is.null(zoomLen)) #condition to skip for zoom plots ## remove commented code in future version
+	if(is.null(zoomLen)) #condition to skip for zoom plots
 		{
-		ap<-ap+#geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
-			# scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0), #add % label, adjust top/bot plot padding
-			                   # sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency"))+ #rev-norm freq for axis
-		  scale_x_continuous(expand=c(pad,0))+ # adjust left/right plot padding
-		  # theme(axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
-		    # axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
-		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
-		  theme(legend.position="none")
-		  guides(fill=guide_legend(title=NULL,order=1),color=guide_legend(order=2)) #enforce legends appearing in consistent order
-		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
+		ap<-ap+scale_x_continuous(expand=c(pad,0))+ #adjust left/right plot padding
+		return(ap) #return central plot
 		}
 	
 	### positioned here to avoid null zoomLen comparison; from zoom argument, determine if forward or reverse scale applies
 	if(deparse(substitute(zoomLen))=="zoom5Len") {
-	  ap<-ap+scale_x_continuous(expand=c(pad,0)) # adjust left/right plot padding
-	} else {
-	  ap<-ap+scale_x_reverse(expand=c(pad,0)) # reverse x-axis, adjust left/right plot padding
+	  ap<-ap+scale_x_continuous(expand=c(pad,0)) #adjust left/right plot padding
+	} else { # assumes zoom3Len
+	  ap<-ap+scale_x_reverse(expand=c(pad,0)) #reverse x-axis, adjust left/right plot padding
 	}
-	
-	ap<-ap+scale_color_manual(values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #fix avqQ to black
-	  # scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0))+ # add % label, adjust top/bottom plot padding
-	  theme(legend.position="none") #remove all title elements, legend from zoom plot. add left/bot axis lines
 	
 	if(!is.null(trim)){ap<-ap+geom_vline(xintercept=trim,linetype="dashed")} #add dashed vertical line at trim position
 	
