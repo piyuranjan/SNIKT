@@ -120,6 +120,13 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 	  theme(title=element_blank(),axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
       axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red")) #change sec axis line, ticks, text to red
 	
+	# set fill colors for 4NT
+	if(length(unique(df$nt))==5) {
+	  ap<-ap+scale_fill_manual(values=c("#F8766D","#A3A500","#00BF7D","#00B0F6","#E76BF3")) # "A", "G", "C", "T", "N"
+	} else { # assumes 2NT (length == 3)
+	  ap<-ap+scale_fill_manual(values=c("#00274C","#FFCB05","#E76BF3")) # "AT", "GC", "N"
+	}
+	
 	if(is.null(zoomLen)) #condition to skip for zoom plots ## remove commented code in future version
 		{
 		ap<-ap+#geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
