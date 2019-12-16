@@ -231,14 +231,14 @@ if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"
 ## Setting graphs in grids
 leftPlots<-arrangeGrob(areaRawComp4ntZoom5,areaRawComp2ntZoom5,ncol=1,top=textGrob("Aligned 5' beginning",gp=gpar(fontface=2,fontsize=14)))
 centerPlots<-arrangeGrob(areaRawComp4nt,areaRawComp2nt,ncol=1,
-						top=textGrob(paste("Compositions to length",dim(rawComp)[1],"aligned 5'"),gp=gpar(fontface=2,fontsize=14)),
-						right=textGrob(label="Read frequency (NT per position)",rot=90,gp=gpar(fontface=2,fontsize=14,col="red")))
+						top=textGrob(paste("Compositions to length",dim(rawComp)[1],"aligned 5'"),gp=gpar(fontface=2,fontsize=14)))
 rightPlots<-arrangeGrob(areaRevComp4ntZoom3,areaRevComp2ntZoom3,ncol=1,
 						top=textGrob("Aligned 3' ending",gp=gpar(fontface=2,fontsize=14)))
 areaArranged<-arrangeGrob(leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1),
 							top=textGrob(label="Sequence Representation Per Position",gp=gpar(fontface=2,fontsize=20)),
 							left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=14)),
-							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=14)))
+							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=14)),
+							right=textGrob(label="Read frequency (NT per position)",rot=90,gp=gpar(fontface=2,fontsize=14,col="red")))
 finalPlotGrid<-grid.arrange(areaArranged,leg,nrow=2,heights=c(28,2))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] All graphs prepared in grid\n",sep="")}
 
