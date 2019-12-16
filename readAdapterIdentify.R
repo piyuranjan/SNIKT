@@ -114,7 +114,7 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 		geom_area(alpha=0.75)+ #area plot; lowered alpha to see gridlines
 		geom_line(aes(y=avgQ,color="Average\nPhred\nScore"),alpha=0.75)+ #avg Phred score
 	  geom_line(aes(y=bases/max(bases)*100,color="Nucleotide\nPer\nPosition"))+ #make normalized length freq as line
-	  scale_y_continuous(labels=paste0(c(0,25,50,75,100),"%"),expand=c(pad,0), #add % label, adjust top/bot plot padding
+	  scale_y_continuous(labels=c(0,25,50,75,100),expand=c(pad,0), #adjust top/bot plot padding
       sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency",labels=format_si()))+ #secondary axis uses SI scale
 		theme_bw()+ #remove grey background
 	  theme(title=element_blank(),axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
