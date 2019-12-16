@@ -136,6 +136,7 @@ AreaPlot<-function(df,zoomLen=NULL,trim=NULL,pad=0.025)
 		  # theme(axis.line=element_line(color="black"),axis.line.y.right=element_line(color="red"), 
 		    # axis.ticks.y.right=element_line(color="red"),axis.text.y.right=element_text(color="red"))+ #changes secondary (right) axis line, ticks, text to red
 		  scale_color_manual(name=element_blank(),breaks=c("Average\nPhred\nScore","Nucleotide\nPer\nPosition"),values=c("Average\nPhred\nScore"="black","Nucleotide\nPer\nPosition"="red"))+ #create line legend
+		  theme(legend.position="none")
 		  guides(fill=guide_legend(title=NULL,order=1),color=guide_legend(order=2)) #enforce legends appearing in consistent order
 		return(ap) #return plot with legends for extraction; legends and axis labels will be removed prior to assembling plot grid
 		}
@@ -207,13 +208,18 @@ areaRawComp4nt<-AreaPlot(rawComp4nt) #plotting full area graph with 4 nt
 rawComp2nt<-gather(rawComp,key=nt,value=composition,c(AT,GC,N)) #reorders AT, GC in long format for ggplot
 areaRawComp2nt<-AreaPlot(rawComp2nt) #plotting full area graph with combination compositions
 
-## Extract legends, then remove from plots
-nt4Grob<-ggplotGrob(areaRawComp4nt)$grobs
-nt2Grob<-ggplotGrob(areaRawComp2nt)$grobs
-nt4Leg<-nt4Grob[[which(map_chr(nt4Grob,function(x) x$name)=="guide-box")]]
-nt2Leg<-nt2Grob[[which(map_chr(nt2Grob,function(x) x$name)=="guide-box")]]
-areaRawComp4nt<-areaRawComp4nt+theme(legend.position="none")
-areaRawComp2nt<-areaRawComp2nt+theme(legend.position="none")
+## Extract legends from a simple plot
+g<-ggplot(data.frame(NT=fct_inorder(paste0("% ",c("A","G","C","T","AT","GC","N"))),N=1:7),aes(x=NT,y=N,fill=NT))+ 
+  geom_col(alpha=0.75)+ 
+  geom_line(aes(group=1,color="Average Phred Score"))+
+  geom_line(aes(y=(N-.5),group=1,color="Nucleotide Per Position"))+ 
+  theme_bw()+
+  scale_color_manual(name=element_blank(),breaks=c("Average Phred Score","Nucleotide Per Position"),values=c("Average Phred Score"="black","Nucleotide Per Position"="red"))+ #create line legend
+  scale_fill_manual(values=c("#F8766D","#A3A500","#00BF7D","#00B0F6","#00274C","#FFCB05","#E76BF3"))+ # "A", "G", "C", "T", "AT", "GC", "N" 
+  guides(fill=guide_legend(title=NULL,order=1,nrow=1),color=guide_legend(order=2))+
+  theme(legend.position="bottom")
+leg_grob<-ggplotGrob(g)$grobs
+leg<-leg_grob[[which(map_chr(leg_grob,function(x) x$name)=="guide-box")]]
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] Forward full compositions calculated and graphed\n",sep="")}
 
 ## Process 5' end compositions for left zoomed-in plots
@@ -244,7 +250,7 @@ areaArranged<-arrangeGrob(leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1
 							top=textGrob(label="Sequence Representation Per Position",gp=gpar(fontface=2,fontsize=20)),
 							left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=14)),
 							bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=14)))
-finalPlotGrid<-grid.arrange(areaArranged,arrangeGrob(nt4Leg,nt2Leg),ncol=2,widths=c(28,2))
+finalPlotGrid<-grid.arrange(areaArranged,leg,nrow=2,heights=c(28,2))
 if(isTRUE(verbose)){cat("[",round(time_length(Sys.time()-startTime,unit="second"),0),"s] All graphs prepared in grid\n",sep="")}
 
 ## Export graphs to file
