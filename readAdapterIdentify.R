@@ -200,10 +200,10 @@ areaRawComp2nt<-AreaPlot(rawComp2nt) #plotting full area graph with combination 
 ## Extract legends from a simple plot
 g<-ggplot(data.frame(NT=fct_inorder(paste0("% ",c("A","G","C","T","AT","GC","N"))),N=1:7),aes(x=NT,y=N,fill=NT))+ 
   geom_col(alpha=0.75)+ 
-  geom_line(aes(group=1,color="Average Phred Score"))+
+  geom_line(aes(group=1,color="Average Phred Score  "))+
   geom_line(aes(y=(N-.5),group=1,color="Nucleotide Per Position"))+ 
   theme_bw()+
-  scale_color_manual(name=element_blank(),breaks=c("Average Phred Score","Nucleotide Per Position"),values=c("Average Phred Score"="black","Nucleotide Per Position"="red"))+ #create line legend
+  scale_color_manual(name=element_blank(),breaks=c("Average Phred Score  ","Nucleotide Per Position"),values=c("Average Phred Score  "="black","Nucleotide Per Position"="red"))+ #create line legend
   scale_fill_manual(values=c("#F8766D","#A3A500","#00BF7D","#00B0F6","#00274C","#FFCB05","#E76BF3"))+ # "A", "G", "C", "T", "AT", "GC", "N" 
   guides(fill=guide_legend(title=NULL,order=1,nrow=1),color=guide_legend(order=2))+
   theme(legend.position="bottom")
