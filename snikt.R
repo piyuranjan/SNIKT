@@ -189,7 +189,9 @@ CreateLegend <- function(){
 	leg_grob[[which(map_chr(leg_grob,function(x) x$name)=="guide-box")]]
 }
 
-DecompressGzip <- function(fileName, path=tmpDir, prefix=outPrefix, proc=threads){
+#--- Needs Review ---#
+# Likely not needed anymore
+DecompressGzip <- function(fileName, path=tmpDir, prefix=outPrefix, proc=1){
 	# Decompress a gzipped fastq file and return new fileName
 	# Parameters:
 	#   fileName(str): Gzipped fastq file (w/ path) to process
@@ -211,6 +213,7 @@ DecompressGzip <- function(fileName, path=tmpDir, prefix=outPrefix, proc=threads
 	if(cmdEC!=0){stop(paste0("ERR: Decompression exited with code: ",cmdEC))}
 	return(outFile)
 }
+#--- ---#
 
 ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 	# Run seqtk on a file and return buffered output.
@@ -255,7 +258,8 @@ ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 # 	seqtkBuffer <- system(cmd,intern=T) #execute seqtk on shell and retrieve data
 # }
 
-ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
+# ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
+ExtractSummary <- function(buffer=seqtkBuffer){
 	# Extract summary statistics from a seqtk buffer and return it.
 	# Parameters:
 	#   buffer(str): Buffered output from a seqtk fqchk run on a fastq file
@@ -275,8 +279,11 @@ ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
 		setNames("Num Seq")
 	# Collect all summary values and order them as needed
 	summDf <- t(c(summ3,summ1,summ2)) %>%
-		data.frame("Fastq File"=fastqName,check.names=F,stringsAsFactors=F) %>%
-		select(13,1,5,2:4,11,12,everything())
+		# data.frame("Fastq File"=fastqName,check.names=F,stringsAsFactors=F) %>%
+		# select(13,1,5,2:4,11,12,everything())
+		data.frame(check.names=F,stringsAsFactors=F) %>%
+		select(1,5,2:4,11,12,everything())
+	# print(summDf)
 	return(summDf)
 }
 
@@ -509,11 +516,21 @@ TrimFiltSeq <- function(seqFile, trim5Len, trim3Len, filtLen, trimFile=NULL){
 }
 
 #--- Needs review ---#
-TrimSeqParallel <- function(seqFile, trim5Len, trim3Len, proc=2, fqPerThread=10){
-	# This function trims fastq sequences from a file using seqtk
-	#   with desired trim lengths on parallel threads
-	# Returns new trimmed file name
-		
+# Chaining trimming commands with GNU Parallel was significantly less efficient than reads
+#   directly being handled by seqtk in a single thread.
+# There is no need for this function and so is deprecated.
+TrimSeqParallel <- function(seqFile, trim5Len, trim3Len, proc=2, fqPerThread=100){
+	# Trim and filter fastq reads with seqtk trimfq and seqtk seq on parallel threads.
+	#   Uses GNU Parallel for thread management in Unix.
+	# Parameters:
+	#   seqFile(str): Fastq file name w/ path to trim.
+	#   trim5Len(int): Nucleotide length to trim from 5' end.
+	#   trim3Len(int): Nucleotide length to trim from 3' end.
+	#   proc(int): Number of threads to use.
+	#   fqPerThread(int): Number of fastq records to pass on one thread.
+	# Returns:
+	#   trimFile(str): Trimmed fastq file name w/ path.
+	
 	# Prepare command
 	trimFile <- sub("\\.f[ast]{0,3}(a|q)(\\.gz)?","-trim.fastq",seqFile,perl=T)
 	cmd <- ""
@@ -615,13 +632,12 @@ Options:
   -w, --workdir=<path>  Path to generate QC file, report. [default: ./]
   --gzip                If fastq file is gzipped. Autodetected normally
                           using the file extension. For large datasets, prior
-                          decompression of fastq may be faster.
+                          decompression of fastq may be faster. Only gzip is
+                          supported within; prior decompression needed for any
+                          other method.
   -k, --keep            Keep intermediate (temporary) directory.
   
   Generic:
-  -p, --proc=<threads>  Num proc threads for parallel trimming. All other
-                          actions are still serial. Requires GNU parallel.
-                          [range: 1..maxCores] [default: 1]
   -h, --help            Show help and exit 0.
   -v, --verbose         Enable status messages.
   --debug               Debug with traceback; enables -v.
@@ -730,7 +746,7 @@ tmpDir <- paste0(workDir,"/",outPrefix,"_SniktTemp_",TimeStamp(time0))
 keepTmpDir <- arg$keep
 
 # Generic variables
-threads <- as.integer(arg$proc)
+# threads <- as.integer(arg$proc)
 
 ## Defaults and conditions after argument parsing
 seqFile <- normalizePath(seqFile) #resolve absolute path
@@ -744,7 +760,7 @@ if(((arg$trim5=="interactive")&(arg$trim3!="interactive"))|((arg$trim5!="interac
 	write(paste0("WARN: Only one trim length is set. Forcing interactive mode."),stderr())
 }
 if(filterLen<0){stop("ERR: -f out of range.")}
-if(threads<1){stop("ERR: -p out of range.")}
+# if(threads<1){stop("ERR: -p out of range.")}
 
 
 # Resolve bug regarding generation of Rplots.pdf
@@ -778,7 +794,8 @@ if(verbose) cat(TimeDiff(time0),"Executing pre-trim seqtk forward pass ... ")
 timeStep <- Sys.time()
 seqtkBuffer <- ExecSeqtk(seqFile,head=headFastq) #compute compositions via seqtk
 if(verbose) cat("done",TimeDiff(timeStep),"\n")
-summRawFq <- ExtractSummary(seqtkBuffer,seqFileName) #extract fastq summary from seqtkBuffer
+# summRawFq <- ExtractSummary(seqtkBuffer,seqFileName) #extract fastq summary from seqtkBuffer
+summRawFq <- ExtractSummary(seqtkBuffer) #extract fastq summary from seqtkBuffer
 maxSeqLen <- as.integer(summRawFq$`Max Length`)
 
 # Correct zoom and trim size according to summary parameters
@@ -874,6 +891,7 @@ if(!is.na(trim5Len) & !is.na(trim3Len) & trim5Len==0 & trim3Len==0){
 	if(headFastq>0){sectionTitle <- paste0(sectionTitle," - up to top ",headFastq," reads")}
 	sectionTitle <- paste0(sectionTitle,"\n\n")
 	writeLines(sectionTitle,mdConn)
+	# writeLines(paste0("Fastq: ",seqFileName,"\n\n"),mdConn)
 	writeLines(knitr::kable(summRawFq),mdConn) #write raw fastq summary to md
 	writeLines(paste0("\n\n![](",noTrimFile,")\n\n"),mdConn)
 	# generate report with a function
@@ -933,18 +951,20 @@ sectionTitle <- paste0("### Nucleotide compositions pre-trimming")
 if(headFastq>0){sectionTitle <- paste0(sectionTitle," - up to top ",headFastq," reads")}
 sectionTitle <- paste0(sectionTitle,"\n\n")
 writeLines(sectionTitle,mdConn)
+# writeLines(paste0("Fastq: ",seqFileName,"\n\n"),mdConn)
 writeLines(knitr::kable(summRawFq),mdConn) #write raw fastq summary to md
 writeLines(paste0("\n\n![](",preTrimFile,")\n\n"),mdConn)
 if(filterLen>0){writeLines(paste0("Filter: dropped reads shorter than ",filterLen," bases.\n\n"),mdConn)}
 
 
 ## Trim reads with seqtk
-if(threads<=1){
-	trimFile <- TrimFiltSeq(seqFile,trim5Len,trim3Len,filterLen) #serial trimming
-} else{
-	# This will need decompression handling.
-	trimFile <- TrimSeqParallel(seqFile,trim5Len,trim3Len,threads) #parallel trimming
-}
+# if(threads<=1){
+# 	trimFile <- TrimFiltSeq(seqFile,trim5Len,trim3Len,filterLen) #serial trimming
+# } else{
+# 	# This will need decompression handling.
+# 	trimFile <- TrimSeqParallel(seqFile,trim5Len,trim3Len,threads) #parallel trimming
+# }
+trimFile <- TrimFiltSeq(seqFile,trim5Len,trim3Len,filterLen)
 
 
 ## Execute 2nd round of seqtk and compute compositions for trimmed reads
@@ -953,8 +973,9 @@ if(verbose) cat(TimeDiff(time0),"Executing post-trim seqtk forward pass ... ")
 timeStep <- Sys.time()
 seqtkBuffer <- ExecSeqtk(trimFile) #compute compositions via seqtk
 if(verbose) cat("done",TimeDiff(timeStep),"\n")
-trimFileName <- basename(trimFile)
-summTrimFq <- ExtractSummary(seqtkBuffer,trimFileName) #extract fastq summary from seqtkBuffer
+# trimFileName <- basename(trimFile)
+# summTrimFq <- ExtractSummary(seqtkBuffer,trimFileName) #extract fastq summary from seqtkBuffer
+summTrimFq <- ExtractSummary(seqtkBuffer) #extract fastq summary from seqtkBuffer
 rawComp <- ExtractCompositions(seqtkBuffer,percHide)  #extract fastq compositions from seqtkBuffer
 # Transform NT compositions in long format for ggplot
 rawComp4 <- pivot_longer(rawComp,names_to="nt",values_to="composition",c(A,T,G,C,N)) %>%
@@ -994,6 +1015,7 @@ if(verbose) cat("done",TimeDiff(timeStep),"\n")
 # Export post-trim graphs in markdown
 writeLines(paste0("<br>\n\n---\n\n<br>\n\n### Nucleotide compositions post-trimming\n\n"),mdConn)
 # writeLines(paste0("---\n\n---\n\n### Nucleotide compositions post-trimming\n\n"),mdConn)
+writeLines(paste0("**Fastq: ",basename(trimFile),"**\n\n"),mdConn)
 writeLines(knitr::kable(summTrimFq),mdConn) #write raw fastq summary to md
 writeLines(paste0("\n\n![](",postTrimGraphFile,")\n\n"),mdConn)
 
