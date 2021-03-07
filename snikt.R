@@ -19,7 +19,6 @@ time0 <- Sys.time()
 
 # Library load without warning messages
 packages <- c("tidyverse","grid","gridExtra","docopt","lubridate")
-# Ask Chris which of the following is better.
 tmp <- lapply(packages,function(x) suppressPackageStartupMessages(require(x,character.only=T)))
 # tmp <- lapply(packages,function(x) suppressWarnings(suppressMessages(require(x,character.only=T))))
 # print(tmp)
@@ -88,36 +87,6 @@ AreaPlot <- function(df, zoomLen=NULL, trim=NULL, pad=0.025){
 	return(ap) #return zoom plot
 }
 
-#--- Needs review ---#
-# This function is likely deprecated
-ComputeComp <- function(seqFile, reads=10000, percentFilter=0.005, revComp=F){
-	# This function 1) computes nucleotide composition per base using the program seqtk;
-	# 2) stores the compositions in a data frame;
-	# 3) subsets the data frame by a user given threshold to remove long tail,
-	#      which is often extremely noisy;
-	# 4) adds AT, GC columns to it.
-	
-	# Prepare command and execute seqtk
-	if(revComp==F){ #compute forward 5' aligned compositions
-		cmd <- paste("seqtk fqchk",seqFile)
-	} else{ #compute reverse complement for 3' alignment and calculate compositions
-		cmd <- paste("seqtk seq -r",seqFile,"|seqtk fqchk -")
-	}
-	compositions <- system(cmd,intern=T) #execute seqtk on shell and retrieve data
-	
-	# Process the seqtk output, store and subset
-	colNames <- c("POS","bases","A","C","G","T","N","avgQ","errQ","low","high") #full list of columns in seqtk output
-	df <- read_delim(compositions,"\t",skip=3,col_names=colNames)
-	df <- df[,1:8] #leaving out last 3 unneccesary columns
-	
-	# Filter compositions by percentage and add paired compositions
-	maxBases <- as.numeric(df[1,2])
-	numFilter <- maxBases*percentFilter #number of base positions to subset until, avoids rendering noise at the end
-	df <- dplyr::filter(df,bases>=numFilter) #remove low confidence compositions by filtering the long tail
-	df <- mutate(df,AT=A+T,GC=G+C) #add paired AT and GC compositions
-}
-#--- ---#
-
 CreateGrid <- function(legendObj=legends, p1L=areaComp4Zoom5, p1R=areaComp4Zoom3, p2L=areaComp2Zoom5, p2R=areaComp2Zoom3, p1C=NULL, p2C=NULL, centerLen=NA){
 	# Create and return a grid of 4 or 6 plots with axis labels and legends.
 	#   This step is the most time consuming as plot objects are finalized to pixels.
@@ -138,7 +107,6 @@ CreateGrid <- function(legendObj=legends, p1L=areaComp4Zoom5, p1R=areaComp4Zoom3
 	# Make labels for the plot grid
 	topLabel <- textGrob(label="Aggregate Sequence Representation Per Nucleotide Position",
 		gp=gpar(fontface=2,fontsize=20))
-	# Need addition of a little space in the line above
 	bottomLabel <- textGrob(label="Read length (nucleotide positions)",
 		gp=gpar(fontface=2,fontsize=14))
 	leftLabel <- textGrob(label="Nucleotide composition (0-100), Average Phred score",
@@ -247,23 +215,12 @@ ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 	seqtkBuffer <- system(cmd,intern=T) #execute seqtk on shell and retrieve data
 	return(seqtkBuffer)
 }
-# ExecSeqtk <- function(fastq=seqFile, revComp=FALSE){
-# 	# This function prepares and executes seqtk command for forward and reverse complement positions
-# 	#   and returns the output as a buffered object
-# 	if(revComp==FALSE){ #compute forward 5' aligned compositions
-# 		cmd <- paste("seqtk fqchk",fastq)
-# 	} else{ #compute reverse complement for 3' alignment and calculate compositions
-# 		cmd <- paste("seqtk seq -r",fastq,"|seqtk fqchk -")
-# 	}
-# 	seqtkBuffer <- system(cmd,intern=T) #execute seqtk on shell and retrieve data
-# }
 
-# ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
-ExtractSummary <- function(buffer=seqtkBuffer){
+ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
 	# Extract summary statistics from a seqtk buffer and return it.
 	# Parameters:
 	#   buffer(str): Buffered output from a seqtk fqchk run on a fastq file
-	#   fastqName(str): Filename of the fastq file w/o path
+	#   fastqName(str): Filename of the fastq file w/o path. Deprecated.
 	# Returns:
 	#   summDf(dataFrame): A data frame with all summary values organized as needed
 	
@@ -335,52 +292,6 @@ FormatSI <- function(...) {
 		paste(format(round(x/limits[i],1),trim=TRUE,scientific=FALSE,...),prefix[i])
 	}
 }
-
-#--- Needs Review ---#
-# Deprecated
-Grid6 <- function(legendObj=legends, plot11=areaComp4Zoom5, plot12=areaComp4, plot13=areaComp4Zoom3, plot21=areaComp2Zoom5, plot22=areaComp2, plot23=areaComp2Zoom3, centerLen=areaLen){
-	# This function puts 6 plot objects in a grid and returns the grid object
-	# Puts axis labels and legends
-	leftPlots <- arrangeGrob(
-		plot11,plot21,ncol=1,
-		top=textGrob("Aligned 5' beginning",gp=gpar(fontface=2,fontsize=14)))
-	centerPlots <- arrangeGrob(
-		plot12,plot22,ncol=1,
-		# top=textGrob(paste("Compositions to length",dim(rawComp4)[1]/5,"aligned 5'"),gp=gpar(fontface=2,fontsize=14)))
-		top=textGrob(paste("Aligned 5' to length",centerLen,gp=gpar(fontface=2,fontsize=14))))
-	rightPlots <- arrangeGrob(
-		plot13,plot23,ncol=1,
-		top=textGrob("Aligned 3' ending",gp=gpar(fontface=2,fontsize=14)))
-	areaArranged <- arrangeGrob(
-		leftPlots,centerPlots,rightPlots,ncol=3,widths=c(1,2,1),
-		# top=textGrob(label="Sequence Representation Per Position",gp=gpar(fontface=2,fontsize=20)),
-		top=textGrob(label="Aggregate Sequence Representation Per Nucleotide Position",gp=gpar(fontface=2,fontsize=20)),
-		# Need addition of a little space in the line above
-		left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=14)),
-		bottom=textGrob(label="Read length (nucleotide positions)",gp=gpar(fontface=2,fontsize=14)),
-		# right=textGrob(label="Read frequency (NT per position)",rot=90,gp=gpar(fontface=2,fontsize=14,col="red")))
-		right=textGrob(label="Read frequency (reads available at each position)",rot=90,gp=gpar(fontface=2,fontsize=14,col="red")))
-	grid.arrange(areaArranged,legendObj,nrow=2,heights=c(28,2))
-}
-
-Grid4 <- function(legendObj=legends, plot11=areaComp4Zoom5, plot12=areaComp4Zoom3, plot21=areaComp2Zoom5, plot22=areaComp2Zoom3){
-	# This function puts 4 plot objects in a grid and returns the grid object
-	# Puts axis labels and legends
-	leftPlots <- arrangeGrob(
-		plot11,plot21,ncol=1,
-		top=textGrob("Aligned 5' beginning",gp=gpar(fontface=2,fontsize=14)))
-	rightPlots <- arrangeGrob(
-		areaComp4Zoom3,areaComp2Zoom3,ncol=1,
-		top=textGrob("Aligned 3' ending",gp=gpar(fontface=2,fontsize=14)))
-	areaArranged <- arrangeGrob(
-		leftPlots,rightPlots,ncol=2,
-		top=textGrob(label="Sequence Representation Per Position",gp=gpar(fontface=2,fontsize=20)),
-		left=textGrob(label="Nucleotide composition (0-100), Average Phred score",rot=90,gp=gpar(fontface=2,fontsize=14)),
-		bottom=textGrob(label="Read length (NT positions)",gp=gpar(fontface=2,fontsize=14)),
-		right=textGrob(label="Read frequency (NT per position)",rot=90,gp=gpar(fontface=2,fontsize=14,col="red")))
-	grid.arrange(areaArranged,legendObj,nrow=2,heights=c(28,2))
-}
-#--- ---#
 
 ReadTrimLen <- function(msg="Enter the trimming length [>=0]: ", maxLen){
 	# Read a whole number in a range from user input and return it.
@@ -646,7 +557,7 @@ Options:
 # Dynamic modification of docString below Usage section results in usage errors
 docString <- sub("scriptPath",scriptPath,docString) #add script location with how it is fired
 # cat(docString)
-version <- '0.2.0'
+version <- '0.3.0'
 programVersion <- paste0("SNIKT ",version,"\n")
 # arg <- docopt(docString,version='SNIKT 0.2.0\n')
 arg <- docopt(docString,version=programVersion)
@@ -666,19 +577,19 @@ if(debug){
 }
 # Print docopt parsed values
 if(debug){
-	# argStr <- toString(arg)
-	# write(paste0("DEBUG: Docopt values as they came from user input.",print(arg)),stderr())
 	write("DEBUG: Docopt values as they came from user input.",stdout())
 	print(arg)
 }
 
+
 ## Set defaults before argument parsing
-# workDir <- getwd()
 zoom5Len <- as.integer(NA)
 zoom3Len <- as.integer(NA)
 filterLen <- as.integer(NA)
 
+
 ## Parse arguments in variables
+
 # Required variables
 seqFile <- arg$fastq
 seqFileName <- basename(seqFile)
@@ -715,9 +626,6 @@ headFastq <- as.integer(arg$skim) #use only top (head) reads for initial inferen
 
 # print(arg)
 # q("no",0,FALSE)
-# zoom5Len <- as.integer(arg$zoom5)
-# zoom3Len <- as.integer(arg$zoom3)
-# filterLen <- as.integer(arg$filter)
 
 # QC variables
 noTrim <- arg$notrim
@@ -748,6 +656,7 @@ keepTmpDir <- arg$keep
 # Generic variables
 # threads <- as.integer(arg$proc)
 
+
 ## Defaults and conditions after argument parsing
 seqFile <- normalizePath(seqFile) #resolve absolute path
 if(!file.exists(seqFile)){stop("ERR: Need a sequence file to proceed. See help with -h.")} #validation check for seqFile
@@ -761,7 +670,6 @@ if(((arg$trim5=="interactive")&(arg$trim3!="interactive"))|((arg$trim5!="interac
 }
 if(filterLen<0){stop("ERR: -f out of range.")}
 # if(threads<1){stop("ERR: -p out of range.")}
-
 
 # Resolve bug regarding generation of Rplots.pdf
 # No need for this block if current dir is being set later
@@ -788,6 +696,7 @@ legends <- CreateLegend() #extract legends from a simple plot to use in every pl
 # }
 #--- ---#
 
+
 ## Execute 1st round of seqtk and gather summary statistics ##
 
 if(verbose) cat(TimeDiff(time0),"Executing pre-trim seqtk forward pass ... ")
@@ -802,8 +711,6 @@ maxSeqLen <- as.integer(summRawFq$`Max Length`)
 # Non-inteactive runs will have trim lengths available at this time.
 # Sum of trim legnths cannot exceed max sequence length 
 if((!is.na(trim5Len))&(!is.na(trim3Len))&((trim5Len+trim3Len)>=maxSeqLen)){
-	# write(paste0("ERR: trim5 (",trim5Len,") length + trim3 (",trim3Len,") length >= max seq length (",maxSeqLen,")."),stderr())
-	# stop("Please select non-overlapping trim lengths with -T, -t.")
 	stop(paste0(
 		"ERR: trim5 (",trim5Len,") length + trim3 (",trim3Len,") length >= max seq length (",maxSeqLen,").\n",
 		"Please select non-overlapping trim lengths with -T, -t."
@@ -863,6 +770,7 @@ areaComp2Zoom5 <- AreaPlot(rawComp2,zoom5Len)
 areaComp4Zoom3 <- AreaPlot(revComp4,zoom3Len)
 areaComp2Zoom3 <- AreaPlot(revComp2,zoom3Len)
 
+
 ## Open connection to a markdown file
 mdFile <- paste0(tmpDir,"/",outPrefix,".md")
 mdReport <- paste0(workDir,"/",outPrefix,".html")
@@ -871,6 +779,7 @@ writeLines(paste0('---\ntitle: "SNIKT contamination report"\n---\n'),mdConn) #ma
 writeLines(paste0("## Input: ",seqFileName,"\n\n---\n\n"),mdConn)
 
 # RenderMd()
+
 
 ## Condition path when user asks to not trim ##
 # Program quits after following this block
@@ -881,7 +790,6 @@ if(!is.na(trim5Len) & !is.na(trim3Len) & trim5Len==0 & trim3Len==0){
 	areaComp4 <- AreaPlot(rawComp4)
 	areaComp2 <- AreaPlot(rawComp2)
 	areaLen <- dim(rawComp4)[1]/5
-	# noTrimGrid <- Grid6(legends,areaComp4Zoom5,areaComp4,areaComp4Zoom3,areaComp2Zoom5,areaComp2,areaComp2Zoom3,areaLen)
 	noTrimGrid <- CreateGrid(legends,areaComp4Zoom5,areaComp4Zoom3,areaComp2Zoom5,areaComp2Zoom3,areaComp4,areaComp2,areaLen)
 	noTrimFile <- paste0(tmpDir,"/",outPrefix,"-noTrim.png")
 	ggsave(noTrimFile,plot=noTrimGrid,height=200,width=400,units="mm")
@@ -902,10 +810,10 @@ if(!is.na(trim5Len) & !is.na(trim3Len) & trim5Len==0 & trim3Len==0){
 
 ## Default condition path with trimming ##
 
+
 ## Interactive mode - take user input
 if(is.na(trim5Len)|is.na(trim3Len)){
 	# Generate temporary graph and save
-	# userGrid4 <- Grid4(legends,areaComp4Zoom5,areaComp2Zoom5,areaComp4Zoom3,areaComp2Zoom3)
 	userGrid4 <- CreateGrid(legends,areaComp4Zoom5,areaComp4Zoom3,areaComp2Zoom5,areaComp2Zoom3)
 	interGraphFile <- paste0(workDir,"/",outPrefix,"-",TimeStamp(),".png")
 	ggsave(interGraphFile,plot=userGrid4,height=200,width=400,units="mm")
@@ -929,9 +837,9 @@ if(is.na(trim5Len)|is.na(trim3Len)){
 	if(trim5Len+trim3Len>as.integer(summRawFq$`Max Length`)){stop("ERR: Sum of trimming lengths is larger than max read length.")} #verification that sum of trim lengths < Max read length
 	
 	# Delete intermediate graph file if not needed anymore
-	# file.remove(interGraphFile)
 	if(!file.remove(interGraphFile)){write(paste0("WARN: Could not remove temporary graph file: ",interGraphFile),stderr())}
 }
+
 
 ## Make 1st set of graphs with trim lines
 areaComp4Zoom5 <- areaComp4Zoom5+geom_vline(xintercept=trim5Len,linetype="dashed")
