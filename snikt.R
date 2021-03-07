@@ -307,7 +307,7 @@ ReadTrimLen <- function(msg="Enter the trimming length [>=0]: ", maxLen){
 	if(!grepl("^[0-9]+$",n)){ #check for +ve integers
 		write("WARN: Enter a whole number [>=0] please.\n",stderr())
 		n <- ReadTrimLen(msg,maxLen)
-	} else if(as.integer(n)>=maxLen){ #check for trim to be shorter than max possible
+	} else if(as.integer(n)>maxLen){ #check for trim to be shorter than max possible
 		write(paste0("WARN: Trim length can not be longer than: ",maxLen,"\n"),stderr())
 		cat("One of the two scenarios is happening with the provided trim length.\n")
 		cat("1 - It's larger so it overlaps the trim on the other side.\n")
@@ -491,10 +491,11 @@ docString <-
 "
 SNIKT: FastQ QC and sequence over-representation check.
        A wrapper around seqtk to plot per-position nucleotide composition
-       for finding, length trimming and filtering fastq sequences.
-       Removes sequence-end and adapter contamination.
+       for finding and trimming adapter contamination in fastq reads.
+       Also filters reads by a length threshold.
 Authors: Piyush Ranjan, Christopher Brown
 
+For first-time users, interactive mode is recommended.
 For detailed help and examples, please visit
 https://github.com/piyuranjan/SNIKT
 
@@ -502,45 +503,47 @@ Location: scriptPath
 
 Usage:
   snikt.R [options] [--] <fastq>
-  snikt.R <fastq>  # Interactive
+  snikt.R <fastq>  # Interactive # Easiest
   snikt.R [--zoom5=<nt> --zoom3=<nt>] <fastq>  # Interactive
   snikt.R [(--trim5=<nt> --trim3=<nt>) | --notrim] <fastq>
   snikt.R [--illumina] [-n] <fastq>
 
 Input:
-  <fastq>               Sequence file in fastQ format with ext .f[ast]q[.gz]
+  <fastq>               Sequence file in fastQ format with exts: .fq, .fq.gz,
+                          .fastq, .fastq.gz
 
 Options:
   Presets:
-  --illumina            This presets options for short-read Illumina datasets.
+  --illumina            This presets options that are better for short-read
+                          Illumina datasets.
                           Sets: -f 0 -Z 50 -z 50
-                          Defaults are set for long-read Nanopore sequences.
+                          Defaults are configured for long-read Nanopore fastq.
 
   Graphing:
   --hide=<frac>         Hide the composition tail by a fraction of total bases.
                           Significantly improves speed, removes end-tail (3')
                           distortion for variable length read sets.
                           [range: 0..1] [default: 0.01]
-  -s, --skim=<num>      Skim fastq with top num reads for pre- or no-trim
-                          graphs. Improves speed. No effect on post-trim graphs.
+  -s, --skim=<num>      Use top num reads for pre- or no-trim graphs. This
+                          improves speed. No effect on post-trim graphs.
                           Use 0 to disable skimming and utilize all reads.
                           [range: 0..maxFastqReads] [default: 10000]
-  -Z, --zoom5=<nt>      NT to zoom-in from aligned 5' beginning
+  -Z, --zoom5=<nt>      Zoom-in from aligned 5' beginning to nt bases.
                           [range: 1..maxSeqLen] [default:300]
-  -z, --zoom3=<nt>      NT to zoom-in from aligned 3' ending
+  -z, --zoom3=<nt>      Zoom-in from aligned 3' ending to nt bases.
                           [range: 1..maxSeqLen] [default:100]
   QC:
   -n, --notrim          Disable positional trimming; useful for short-read data
                           Takes precedence over and sets: -T 0 -t 0
-  -T, --trim5=<nt>      NT to trim from aligned 5' side
+  -T, --trim5=<nt>      Trim nt bases from aligned 5' side.
                           [range: 0..(maxSeqLen-trim3)] [default: interactive]
-  -t, --trim3=<nt>      NT to trim from aligned 3' side
+  -t, --trim3=<nt>      Trim nt bases from aligned 3' side.
                           [range: 0..(maxSeqLen-trim5)] [default: interactive]
   -f, --filter=<nt>     Filter (drop) reads with length < nt after any trimming.
                           [range: 0..maxSeqLen] [default:500]
   IO:
-  -o, --out=<prefix>    Prefix for output files [default: fastqNoExt]
-  -w, --workdir=<path>  Path to generate QC file, report. [default: ./]
+  -o, --out=<prefix>    Prefix for output files [default: fastqNoExtension]
+  -w, --workdir=<path>  Path to generate QC file and report. [default: ./]
   --gzip                If fastq file is gzipped. Autodetected normally
                           using the file extension. For large datasets, prior
                           decompression of fastq may be faster. Only gzip is
@@ -639,7 +642,7 @@ if(arg$notrim){
 }
 
 # IO variables
-if(arg$out=="fastqNoExt"){
+if(arg$out=="fastqNoExtension"){
 	outPrefix <- sub("\\.f[ast]{0,3}q(\\.gz)?","",seqFileName,perl=TRUE) #extract sequence file prefix
 } else{
 	outPrefix <- arg$out
