@@ -1,6 +1,6 @@
 # SNIKT
 
----
+
 
 **Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a wrapper program written in R that reports a visual confirmation of adapter or systemic contamination in metagenomic sequencing DNA or RNA reads and trims sequence ends to remove them. This program depends on [Seqtk](https://github.com/lh3/seqtk) for handling of fastq data, which is a fast, lightweight tool written in C.  
 
@@ -80,11 +80,11 @@ $ snikt.R reads.fastq.gz
 This will prepare a temporary graph using top 10K reads from your set and will prompt you to check for contamination. While you check the figure, the prompt will wait for you to pick a trim length. This procedure also implements a default read length filter. If you would like to change that filter, you should kill the execution and rerun with appropriate options.  
 Once you pick trim lengths, the program trims reads, filters them by the length specified and exports them to a fastq file. After that, it prepares a summary report with the following elements.  
 
-![Pre-QC Summary](./images/preqc_summary.png)
+![Pre-QC Summary](images/preqc_summary.png)
 
 This part of the summary report is similar to the temporary graph presented to the user for making a decision on trim lengths. It shows a bias in nucleotide compositions and Phred scores suggesting contamination at ends.  
 
-![Post-QC Summary](./images/postqc_summary.png)
+![Post-QC Summary](images/postqc_summary.png)
 
 This part of the summary report shows the effect of trimming and filtering on the reads. This is the report for the post-cleanup reads that were generated as the process of running this program.
 
@@ -96,7 +96,7 @@ $ snikt.R --notrim reads.fastq.gz
 ```
 This step will disable any cleanup process and will prepare a pre-QC report with a 6 panel graph. While this decision is only made with top 10K reads by default, users can use the entire dataset by specifying option `--skim=0`. Use this report to make a decision about trim and filter lengths.  
 
-![No-QC Summary](./images/noqc_summary.png)
+![No-QC Summary](images/noqc_summary.png)
 
 This report can also be tailored for Illumina reads with the `--illumina` preset option.  
 
@@ -205,7 +205,7 @@ Imagine the following:
 > *Hey adpater, why don't you just back off...*  
 >                                   - Wolverine  
 
-And after a <img src="./images/snikt_bubble.png" alt="SNIKT!" width="100"/> your read sequences are no longer sequences... they are tequences!
+And after a <img src="images/snikt_bubble.png" alt="SNIKT!" width="100"/> your read sequences are no longer sequences... they are tequences!
 
 
 #### 5.2 Can this method be used for marker gene (16S) read data?
