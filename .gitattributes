@@ -1,3 +1,5 @@
-# Configure lf line endings for specific files
-*.md text eol=lf
+# Configure lf line endings for specific file types
+*.pl text eol=lf
+*.sh text eol=lf
 *.R text eol=lf
+*.md text eol=lf
