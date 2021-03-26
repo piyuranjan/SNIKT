@@ -41,7 +41,7 @@ And that's it for the setup with this option. Activate the environment and feel 
 ```
 $ conda activate envSnikt
 $ snikt.R --version
-SNIKT 0.3.0
+SNIKT 0.4.0
 ```
 If you ever need to uninstall, you can directly remove the environment with the following.
 ```
@@ -112,6 +112,7 @@ This step will now clean up reads and will prepare a report pre- and post-cleanu
 This program has been tested on the following system environments:
 
 - Windows Subsystem Linux running Ubuntu 18.04 LTS
+- Ubuntu 18.04 LTS
 - CentOS 7 running on UM's ARC High Performance Compute cluster with slurm scheduler.
 
 This program has been tested with the following dependencies and their versions. We recommend using listed versions or higher for these dependencies.
@@ -125,6 +126,8 @@ This program has been tested with the following dependencies and their versions.
 
 ## 4. Full command line help
 
+A full version of command line help is included here for ease of use. However, this version of the help documentation is not guaranteed to be as up to date as from the program itself. Whenever in doubt, please refer to the documentation produced by running `snikt.R -h`.
+
 ```
 SNIKT: FastQ QC and sequence over-representation check.
        A wrapper around seqtk to plot per-position nucleotide composition
@@ -136,7 +139,7 @@ For first-time users, interactive mode is recommended.
 For detailed help and examples, please visit
 https://github.com/piyuranjan/SNIKT
 
-Location: scriptPath
+Location: ./snikt.R
 
 Usage:
   snikt.R [options] [--] <fastq>
@@ -153,14 +156,14 @@ Options:
   Presets:
   --illumina            This presets options that are better for short-read
                           Illumina datasets.
-                          Sets: -f 0 -Z 50 -z 50
+                          Sets: -f 0 -Z 50 -z 50 --hide=0
                           Defaults are configured for long-read Nanopore fastq.
 
   Graphing:
   --hide=<frac>         Hide the composition tail by a fraction of total bases.
                           Significantly improves speed, removes end-tail (3')
                           distortion for variable length read sets.
-                          [range: 0..1] [default: 0.01]
+                          [range: 0..1] [default:0.01]
   -s, --skim=<num>      Use top num reads for pre- or no-trim graphs. This
                           improves speed. No effect on post-trim graphs.
                           Use 0 to disable skimming and utilize all reads.
@@ -187,7 +190,7 @@ Options:
                           supported within; prior decompression needed for any
                           other method.
   -k, --keep            Keep intermediate (temporary) directory.
-  
+
   Generic:
   -h, --help            Show help and exit 0.
   -v, --verbose         Enable status messages.

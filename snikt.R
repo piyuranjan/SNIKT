@@ -216,11 +216,10 @@ ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 	return(seqtkBuffer)
 }
 
-ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
+ExtractSummary <- function(buffer=seqtkBuffer){
 	# Extract summary statistics from a seqtk buffer and return it.
 	# Parameters:
 	#   buffer(str): Buffered output from a seqtk fqchk run on a fastq file
-	#   fastqName(str): Filename of the fastq file w/o path. Deprecated.
 	# Returns:
 	#   summDf(dataFrame): A data frame with all summary values organized as needed
 	
@@ -230,16 +229,14 @@ ExtractSummary <- function(buffer=seqtkBuffer, fastqName=seqFileName){
 	# Extract specific fields from initial lines of the seqtk buffer
 	summ1 <- str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]] %>%
 		setNames(c("Min Length","Max Length","Avg Length"))
-	summ2 <- str_split(buffer[3],"\t")[[1]][2:9] %>%
-		setNames(c("Num Bases","A","C","G","T","N","Avg Q","Err Q"))
+	summ2 <- str_split(buffer[3],"\t")[[1]][2:8] %>%
+		setNames(c("Num Bases","A","C","G","T","N","Avg Q"))
 	summ3 <- str_split(buffer[4],"\t")[[1]][2] %>%
 		setNames("Num Seq")
 	# Collect all summary values and order them as needed
 	summDf <- t(c(summ3,summ1,summ2)) %>%
-		# data.frame("Fastq File"=fastqName,check.names=F,stringsAsFactors=F) %>%
-		# select(13,1,5,2:4,11,12,everything())
 		data.frame(check.names=F,stringsAsFactors=F) %>%
-		select(1,5,2:4,11,12,everything())
+		select(1,5,2:4,11,everything())
 	# print(summDf)
 	return(summDf)
 }
@@ -516,14 +513,14 @@ Options:
   Presets:
   --illumina            This presets options that are better for short-read
                           Illumina datasets.
-                          Sets: -f 0 -Z 50 -z 50
+                          Sets: -f 0 -Z 50 -z 50 --hide=0
                           Defaults are configured for long-read Nanopore fastq.
 
   Graphing:
   --hide=<frac>         Hide the composition tail by a fraction of total bases.
                           Significantly improves speed, removes end-tail (3')
                           distortion for variable length read sets.
-                          [range: 0..1] [default: 0.01]
+                          [range: 0..1] [default:0.01]
   -s, --skim=<num>      Use top num reads for pre- or no-trim graphs. This
                           improves speed. No effect on post-trim graphs.
                           Use 0 to disable skimming and utilize all reads.
@@ -560,7 +557,7 @@ Options:
 # Dynamic modification of docString below Usage section results in usage errors
 docString <- sub("scriptPath",scriptPath,docString) #add script location with how it is fired
 # cat(docString)
-version <- '0.3.0'
+version <- '0.4.0'
 programVersion <- paste0("SNIKT ",version,"\n")
 # arg <- docopt(docString,version='SNIKT 0.2.0\n')
 arg <- docopt(docString,version=programVersion)
@@ -589,6 +586,7 @@ if(debug){
 zoom5Len <- as.integer(NA)
 zoom3Len <- as.integer(NA)
 filterLen <- as.integer(NA)
+percHide <- as.numeric(NA)
 
 
 ## Parse arguments in variables
@@ -603,8 +601,9 @@ if(illumina){ #set variables for Illumina reads
 	filterLen <- 0
 	zoom5Len <- 50
 	zoom3Len <- 50
+	percHide <- 0
 }
-if(debug) write(paste0("DEBUG: Values after parsing --illumina:\t-Z=",zoom5Len,"\t-z=",zoom3Len,"\t-f=",filterLen,"\n"),stderr())
+if(debug) write(paste0("DEBUG: Values after parsing --illumina:\t-Z=",zoom5Len,"\t-z=",zoom3Len,"\t-f=",filterLen,"\t--hide=",percHide,"\n"),stderr())
 # Arguments used in presets need special parsing
 if(!is.null(arg$zoom5)){
 	zoom5Len <- as.integer(arg$zoom5)
@@ -621,10 +620,14 @@ if(!is.null(arg$filter)){
 } else if(is.na(filterLen)){
 	filterLen <- 500 #default for filterLen (-f) must be set here. Setting only in docopt string won't work.
 }
-if(debug) write(paste0("DEBUG: After parsing preset values:\t-Z=",zoom5Len,"\t-z=",zoom3Len,"\t-f=",filterLen,"\n"),stderr())
+if(!is.null(arg$hide)){ #percent bases to hide from 3'. Avoids rendering noise at the end for full graph.
+	percHide <- as.numeric(arg$hide)
+} else if(is.na(percHide)){
+	percHide <- 0.01 #default for percHide (--hide) must be set here. Setting only in docopt string won't work.
+}
+if(debug) write(paste0("DEBUG: After parsing preset values:\t-Z=",zoom5Len,"\t-z=",zoom3Len,"\t-f=",filterLen,"\t--hide=",percHide,"\n"),stderr())
 
 # Graphing variables
-percHide <- as.numeric(arg$hide) #percent bases to hide from 3'. Avoids rendering noise at the end for full graph.
 headFastq <- as.integer(arg$skim) #use only top (head) reads for initial inference.
 
 # print(arg)
@@ -644,8 +647,10 @@ if(arg$notrim){
 # IO variables
 if(arg$out=="fastqNoExtension"){
 	outPrefix <- sub("\\.f[ast]{0,3}q(\\.gz)?","",seqFileName,perl=TRUE) #extract sequence file prefix
+	trimFileName <- paste0(outPrefix,"_trim.fastq") #make trim filename
 } else{
 	outPrefix <- arg$out
+	trimFileName <- paste0(outPrefix,".fastq") #make trim filename
 }
 if(arg$workdir=="./"){
 	workDir <- getwd()
@@ -875,7 +880,9 @@ if(filterLen>0){writeLines(paste0("Filter: dropped reads shorter than ",filterLe
 # 	# This will need decompression handling.
 # 	trimFile <- TrimSeqParallel(seqFile,trim5Len,trim3Len,threads) #parallel trimming
 # }
-trimFile <- TrimFiltSeq(seqFile,trim5Len,trim3Len,filterLen)
+trimFile <- paste0(workDir,"/",trimFileName)
+trimFile <- TrimFiltSeq(seqFile,trim5Len,trim3Len,filterLen,trimFile)
+cat("SNIKT cleaned reads are available in: ",trimFile,"\n")
 
 
 ## Execute 2nd round of seqtk and compute compositions for trimmed reads
