@@ -1,16 +1,5 @@
 #!/usr/bin/env Rscript
 
-## Commenting suggestions ##
-### Section headers like this ###
-## Content headers like this ##
-# Full-line comment like this
-#   and can continue on second line like this
-# And continuous, new full-line comment like this
-#x<-as.numeric(y); #inline comment like this
-# Anything that needs review (or a message tag) like the following
-#--- Needs Review ---#
-#--- ---#
-
 ##############
 ### Config ###
 ##############
@@ -19,8 +8,9 @@ time0 <- Sys.time()
 
 # Library load without warning messages
 packages <- c("tidyverse","grid","gridExtra","docopt","lubridate")
-tmp <- lapply(packages,function(x) suppressPackageStartupMessages(require(x,character.only=T)))
-# tmp <- lapply(packages,function(x) suppressWarnings(suppressMessages(require(x,character.only=T))))
+# tmp <- lapply(packages,function(x) suppressPackageStartupMessages(require(x,character.only=T)))
+tmp <- lapply(packages,function(x) suppressPackageStartupMessages(library(x,character.only=T)))
+# tmp <- lapply(packages,function(x) suppressWarnings(suppressMessages(library(x,character.only=T))))
 # print(tmp)
 
 # Find exactly how script is executed
@@ -194,6 +184,8 @@ ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 	#   seqtkBuffer(str): Output from seqtk as a buffered string.
 	
 	cmd=""
+	fastq <- str_replace_all(fastq,' ','\\\\ ') # escape any spaces in file or path
+	# writeLines(paste('fastq:',fastq))
 	# Prepare command to handle taking top fastq records and decompression
 	if(head>0){ #decompression must be done with head
 		lines <- head*4 #convert fastq records to lines in file
@@ -205,6 +197,8 @@ ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 	} else{ #decompression will be done by seqtk if full fastq is being processed
 		cmd <- paste0(cmd,"cat ",fastq," | ")
 	}
+	# writeLines(paste('cmd:',cmd))
+	# q('no',0,FALSE)
 	# Prepare command for seqtk
 	if(revComp==FALSE){ #compute forward 5' aligned compositions
 		cmd <- paste0(cmd,"seqtk fqchk -")
@@ -213,6 +207,7 @@ ExecSeqtk <- function(fastq=seqFile, revComp=FALSE, head=0, isFastqGz=isFqGz){
 	}
 	# cat(cmd)
 	seqtkBuffer <- system(cmd,intern=T) #execute seqtk on shell and retrieve data
+	if(debug){write(paste0('\nDEBUG: ',cmd),stderr())}
 	return(seqtkBuffer)
 }
 
@@ -227,12 +222,23 @@ ExtractSummary <- function(buffer=seqtkBuffer){
 	colOrder <- "POS	#bases	%A	%C	%G	%T	%N	avgQ	errQ	%low	%high"
 	if(buffer[2]!=colOrder){stop("ERR: seqtk output looks inconsistent. Please check seqtk version.")}
 	# Extract specific fields from initial lines of the seqtk buffer
-	summ1 <- str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]] %>%
-		setNames(c("Min Length","Max Length","Avg Length"))
-	summ2 <- str_split(buffer[3],"\t")[[1]][2:8] %>%
-		setNames(c("Num Bases","A","C","G","T","N","Avg Q"))
-	summ3 <- str_split(buffer[4],"\t")[[1]][2] %>%
-		setNames("Num Seq")
+	if(length(str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]]) == 3){
+		summ1 <- str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]] %>%
+			setNames(c("Min Length","Max Length","Avg Length"))
+		summ2 <- str_split(buffer[3],"\t")[[1]][2:8] %>%
+			setNames(c("Num Bases","A","C","G","T","N","Avg Q"))
+		summ3 <- str_split(buffer[4],"\t")[[1]][2] %>%
+			setNames("Num Seq")
+	} else{
+		# write(paste0("ERR: This file is either not a fastq or doesn't have any reads.\n",stderr()))
+		stop("ERR: This file is either not a fastq or doesn't have any reads.")
+	}
+	# summ1 <- str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]] %>%
+	# 	setNames(c("Min Length","Max Length","Avg Length"))
+	# summ2 <- str_split(buffer[3],"\t")[[1]][2:8] %>%
+	# 	setNames(c("Num Bases","A","C","G","T","N","Avg Q"))
+	# summ3 <- str_split(buffer[4],"\t")[[1]][2] %>%
+	# 	setNames("Num Seq")
 	# Collect all summary values and order them as needed
 	summDf <- t(c(summ3,summ1,summ2)) %>%
 		data.frame(check.names=F,stringsAsFactors=F) %>%
@@ -399,13 +405,15 @@ TrimFiltSeq <- function(seqFile, trim5Len, trim3Len, filtLen, trimFile=NULL){
 	if(is.null(trimFile)){trimFile <- sub("\\.f[ast]{0,3}(a|q)(\\.gz)?","_trim.fastq",seqFile,perl=TRUE)}
 	
 	# Make trimming and filtering command
+	fastq <- str_replace_all(trimFile,' ','\\\\ ') # escape any spaces in file or path
+	seqFile <- str_replace_all(seqFile,' ','\\\\ ') # escape any spaces in file or path
 	cmd <- paste0("seqtk trimfq -b ",trim5Len," -e ",trim3Len," ",seqFile)
 	statusMsg <- paste0("Executing serial trim ")
 	if(filtLen>0){
 		cmd <- paste0(cmd," | seqtk seq -L ",filtLen," -")
 		statusMsg <- paste0(statusMsg,"and filter ")
 	}
-	cmd <- paste0(cmd," >",trimFile)
+	cmd <- paste0(cmd," >",fastq)
 	statusMsg <- paste0(statusMsg,"command ...")
 	if(debug){statusMsg <- paste0(statusMsg,"\nDEBUG: ",cmd)} #embed seqtk command in status message
 	
@@ -490,7 +498,7 @@ SNIKT: FastQ QC and sequence over-representation check.
        A wrapper around seqtk to plot per-position nucleotide composition
        for finding and trimming adapter contamination in fastq reads.
        Also filters reads by a length threshold.
-Authors: Piyush Ranjan, Christopher Brown
+Authors Piyush Ranjan, Christopher Brown
 
 For first-time users, interactive mode is recommended.
 For detailed help and examples, please visit
@@ -501,7 +509,7 @@ Location: scriptPath
 Usage:
   snikt.R [options] [--] <fastq>
   snikt.R <fastq>  # Interactive # Easiest
-  snikt.R [--zoom5=<nt> --zoom3=<nt>] <fastq>  # Interactive
+  snikt.R [--zoom5=<nt>] [--zoom3=<nt>] <fastq>  # Interactive
   snikt.R [(--trim5=<nt> --trim3=<nt>) | --notrim] <fastq>
   snikt.R [--illumina] [-n] <fastq>
 
@@ -580,6 +588,7 @@ if(debug){
 	write("DEBUG: Docopt values as they came from user input.",stdout())
 	print(arg)
 }
+# q("no",0,FALSE)
 
 
 ## Set defaults before argument parsing
@@ -594,6 +603,8 @@ percHide <- as.numeric(NA)
 # Required variables
 seqFile <- arg$fastq
 seqFileName <- basename(seqFile)
+# writeLines(paste("seqFile",seqFile,"\nseqFileName",seqFileName))
+# q("no",0,FALSE)
 
 # Preset variables, their arguments and DEFAULTS
 illumina <- arg$illumina
@@ -660,6 +671,8 @@ if(arg$workdir=="./"){
 isFqGz <- arg$gzip
 tmpDir <- paste0(workDir,"/",outPrefix,"_SniktTemp_",TimeStamp(time0))
 keepTmpDir <- arg$keep
+# writeLines(paste('workDir',workDir,'\ntmpDir',tmpDir))
+# q('no',0,FALSE)
 
 # Generic variables
 # threads <- as.integer(arg$proc)
@@ -667,6 +680,7 @@ keepTmpDir <- arg$keep
 
 ## Defaults and conditions after argument parsing
 seqFile <- normalizePath(seqFile) #resolve absolute path
+# seqFile <- str_replace_all(seqFile,' ','\\\\ ') # escape any spaces in file or path
 if(!file.exists(seqFile)){stop("ERR: Need a sequence file to proceed. See help with -h.")} #validation check for seqFile
 if(grepl("\\.gz(ip)?$",seqFile)) isFqGz <- TRUE #override isGzip if extension found in file name
 if(percHide>1|percHide<0){stop("ERR: --hide out of range.")}
@@ -891,6 +905,7 @@ if(verbose) cat(TimeDiff(time0),"Executing post-trim seqtk forward pass ... ")
 timeStep <- Sys.time()
 seqtkBuffer <- ExecSeqtk(trimFile) #compute compositions via seqtk
 if(verbose) cat("done",TimeDiff(timeStep),"\n")
+
 # trimFileName <- basename(trimFile)
 # summTrimFq <- ExtractSummary(seqtkBuffer,trimFileName) #extract fastq summary from seqtkBuffer
 summTrimFq <- ExtractSummary(seqtkBuffer) #extract fastq summary from seqtkBuffer
@@ -899,6 +914,7 @@ rawComp <- ExtractCompositions(seqtkBuffer,percHide)  #extract fastq composition
 rawComp4 <- pivot_longer(rawComp,names_to="nt",values_to="composition",c(A,T,G,C,N)) %>%
 	mutate(nt=factor(nt,levels=c("A","G","C","T","N"))) #set order for nucleotide cols
 rawComp2 <- pivot_longer(rawComp,names_to="nt",values_to="composition",c(AT,GC,N))
+
 # Process full-fastq reverse complement compositions for zommed-right plots
 if(verbose) cat(TimeDiff(time0),"Executing post-trim seqtk reverse pass ... ")
 timeStep <- Sys.time()
