@@ -4,7 +4,7 @@
 
 **Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a wrapper program written in R that reports a visual confirmation of adapter or systemic contamination in metagenomic sequencing DNA or RNA reads and trims sequence ends to remove them. This program depends on [Seqtk](https://github.com/lh3/seqtk) for handling of fastq data, which is a fast, lightweight tool written in C.  
 
-This program is most suitable for long, variable-length reads, for example, from the Oxford Nanopore instruments. This is because read end trimming for long reads does not have a significant impact on the overall read throughput post-cleaning. This program has also been modified to accomodate short, fixed-length (Illumina) reads for identification of adapter contamination, however, end-trimming on such datasets is disabled by default.
+This program is most suitable for long, variable-length reads, for example, from the Oxford Nanopore instruments. This is because read end trimming for long reads does not have a significant impact on the overall read throughput post-cleaning. This program has also been modified to accommodate short, fixed-length (Illumina) reads for identification of adapter contamination, however, end-trimming on such datasets is disabled by default.
 
 ## 1. Installation
 
@@ -14,39 +14,30 @@ SNIKT is only available on Unix-like platforms (Linux, Mac OS and WSL). The easi
 
 For this setup process to work, you will need to install the Conda package manager and setup Bioconda repositories. Instructions for setting up Bioconda can be found on the [Bioconda installation page](https://bioconda.github.io/user/install.html). Only setup steps 1 and 2 are needed for this. Once you have the `conda` set up and working, please start a new session.
 
-*Optional: Install and use mamba for conda management.*
-[Mamba](https://github.com/mamba-org/mamba) is a reimplementation of the Conda package manager in C++ and has several benefits over using Conda. It works as a drop-in replacement for `conda` for most Conda commands except for environment activation commands. Full help and instructions can be viewed on the [Mamba GitHub page](https://github.com/mamba-org/mamba), but for simplicity here is how you can install `mamba` with your bioconda installation.
-```
-$ conda install -n base -c conda-forge mamba
-```
-After this installation, mamba can be used in the next step (and for management of any other environments/packages).
+*Optional: Install and use `mamba` for conda management.*
+[Mamba](https://github.com/mamba-org/mamba) is a reimplementation of the Conda package manager in C++ and has several benefits over using Conda. It works as a drop-in replacement for `conda` for most Conda commands except for environment activation commands. Full help and instructions can be viewed on the [Mamba GitHub page](https://github.com/mamba-org/mamba), but for simplicity here is how you can install `mamba` with your `conda` installation.
 
-We are considering making this software available as a conda recipe in the future which will simplify the installation to almost a single command. Until then, please follow these steps to set up SNIKT via `conda`.
+`$ conda install -n base -c conda-forge mamba`
 
-Set up a new environment and install dependencies. You can make your own choice but here we explain these steps with `envSnikt` as our environment name. We explain with this convention here to avoid confusion between the environment name and the package name. However, using the same environment name as the package name is a common practice.
-```
-$ conda create -n envSnikt r-tidyverse r-gridExtra r-docopt r-lubridate seqtk
-```
-Or if `mamba` is installed:
-```
-$ mamba create -n envSnikt r-tidyverse r-gridExtra r-docopt r-lubridate seqtk
-```
+After this installation, `mamba` can be used in the next step (and for management of any other environments/packages). We recommend using `mamba` as the parallelization during installation helps speed up the process of getting several R libraries if your network and storage media allows.
 
-Next, download the SNIKT code from the GitHub repository and place it under the environment we just created. For this purpose, we are assuming that we had set up `miniconda` in the location `~/miniconda3/`. Please make sure to use the right path to your `conda` installation. This path shows up during `bioconda` setup and can be obtained with `$ echo $CONDA_PREFIX` as well if the base environment (or any environment really) is active. After keeping the `snikt.R` code in the environment, we provide it execute permissions.
-```
-$ wget https://github.com/piyuranjan/SNIKT/raw/main/snikt.R -O ~/miniconda3/envs/envSnikt/bin/snikt.R
-$ chmod +x ~/miniconda3/envs/envSnikt/bin/snikt.R
-```
+Now SNIKT can be set up in a new environment with the following command.
+
+`$ mamba create -n snikt snikt`
+
+or
+
+`$ conda create -n snikt snikt`
+
 And that's it for the setup with this option. Activate the environment and feel the power of Adamantium blades slicing and dicing nucleotides!
 ```
-$ conda activate envSnikt
+$ conda activate snikt
 $ snikt.R --version
 SNIKT 0.4.0
 ```
-If you ever need to uninstall, you can directly remove the environment with the following.
-```
-$ conda remove -n envSnikt --all
-```
+If you ever need to uninstall, you can remove the environment with the following.
+
+`$ conda remove -n snikt --all`
 
 ### 1.2 Using a local R installation
 
@@ -62,22 +53,25 @@ R version 4.0.3 (2020-10-10) -- "Bunny-Wunnies Freak Out"
 ```
 
 Now, that the dependencies are set, we can download SNIKT.
-```
-$ git clone https://github.com/piyuranjan/SNIKT.git
-```
+
+`$ git clone https://github.com/piyuranjan/SNIKT.git`
+
 After this download, you can either put the downloaded folder on your system `PATH` or copy the `snikt.R` code to a location that is already on your `PATH`.
+
+
 
 ## 2. How to use SNIKT
 
-For first time users, we recommend using this program via the interactive method. This program can also be run in batch mode if a visual interface in unavailable, for example, on a remote server with SSH.
+For first time users, we recommend using this program via the interactive method. This program can also run in batch mode if a visual interface in unavailable, for example, on a remote server with SSH.
 
 ### 2.1 Interactive mode
 
 This, in our opinion, is the easiest method of using this program.
-```
-$ snikt.R reads.fastq.gz
-```
-This will prepare a temporary graph using top 10K reads from your set and will prompt you to check for contamination. While you check the figure, the prompt will wait for you to pick a trim length. This procedure also implements a default read length filter. If you would like to change that filter, you should kill the execution and rerun with appropriate options.  
+
+`$ snikt.R reads.fastq.gz`
+
+This will prepare a temporary graph using top 10K reads from your set and will prompt you to check for contamination. While you check the figure, the prompt will wait for you to pick a trim length. This procedure also implements a default read length filter. If you would like to change that filter, you should kill the execution (<kbd>Ctrl</kbd>+<kbd>c</kbd>, <kbd>Enter</kbd>) and rerun with appropriate options. 
+
 Once you pick trim lengths, the program trims reads, filters them by the length specified and exports them to a fastq file. After that, it prepares a summary report with the following elements.  
 
 ![Pre-QC Summary](images/preqc_summary.png)
@@ -91,29 +85,36 @@ This part of the summary report shows the effect of trimming and filtering on th
 ### 2.2 Batch mode
 
 The batch mode is useful when the user does not have the capacity to view the temporary graph while the program runs. This is true, for example, if this program is run as a job on a supercomputing cluster. In this scenario, this program can be run in two phases, where the first phase helps with identification of contamination and the second performs cleanup of reads.
-```
-$ snikt.R --notrim reads.fastq.gz
-```
+
+`$ snikt.R --notrim reads.fastq.gz`
+
+When running in this mode, the process can also be parallelized for a large library of fastq files with command wrapping in GNU `parallel`. For example, the following command will run the first phase on all fastq files in a directory using `<n>` threads.
+
+`$ parallel -vkj<n> snikt.R -n {} ::: *.fastq.gz`
+
 This step will disable any cleanup process and will prepare a pre-QC report with a 6 panel graph. While this decision is only made with top 10K reads by default, users can use the entire dataset by specifying option `--skim=0`. Use this report to make a decision about trim and filter lengths.  
 
 ![No-QC Summary](images/noqc_summary.png)
 
 This report can also be tailored for Illumina reads with the `--illumina` preset option.  
 
-Once a decision is made, user can execute Snikt again this time with pre-set trim and filter options.
-```
-$ snikt.R --trim5=120 --trim3=25 --filter=1000 reads.fastq.gz
-```
-This step will now clean up reads and will prepare a report pre- and post-cleanup similar to the one generated with the interactive mode. Note that the previous report file will be overwritten unless changed with the option `-o`.  
+Once a decision is made, user can execute SNIKT again this time with pre-set trim and filter options.
 
+`$ snikt.R --trim5=120 --trim3=25 --filter=1000 reads.fastq.gz`
+
+Or if the trim criteria are same across all fastq, the command can be parallelized on `<n>` threads.
+
+`$ parallel -vkj<n> snikt.R -T 120 -t 25 -f 1000 {} ::: *.fastq.gz`
+
+This step will now clean up reads and will prepare a report pre- and post-cleanup similar to the one generated with the interactive mode. Note that the previous report file will be overwritten unless changed with the option `-o`. 
 
 ## 3. Compatibility
 
 This program has been tested on the following system environments:
 
-- Windows Subsystem Linux running Ubuntu 18.04 LTS
+- Windows Subsystem for Linux running Ubuntu 18.04 LTS
 - Ubuntu 18.04 LTS
-- CentOS 7 running on UM's ARC High Performance Compute cluster with slurm scheduler.
+- CentOS 7 running on UM's ARC High Performance Compute cluster with SLURM scheduler.
 
 This program has been tested with the following dependencies and their versions. We recommend using listed versions or higher for these dependencies.
 
@@ -126,7 +127,7 @@ This program has been tested with the following dependencies and their versions.
 
 ## 4. Full command line help
 
-A full version of command line help is included here for ease of use. However, this version of the help documentation is not guaranteed to be as up to date as from the program itself. Whenever in doubt, please refer to the documentation produced by running `snikt.R -h`.
+A full version of command line help is included here for ease of use. However, this version of the help documentation is not guaranteed to be as up to date as from the program itself. Whenever in doubt, please refer to the documentation produced by running `$ snikt.R -h`.
 
 ```
 SNIKT: FastQ QC and sequence over-representation check.
@@ -139,7 +140,7 @@ For first-time users, interactive mode is recommended.
 For detailed help and examples, please visit
 https://github.com/piyuranjan/SNIKT
 
-Location: ./snikt.R
+Location: /home/pr/miniconda3/envs/snikt/bin/snikt.R
 
 Usage:
   snikt.R [options] [--] <fastq>
@@ -200,21 +201,25 @@ Options:
 
 ## 5. FAQ
 
-#### 5.1 Why the name SNIKT?
-We at the Univesity of Michigan are a huge Wolverine fan. So we couldn't pass an opportunity to relate our program that involves identifying (sniffing) and trimming (slashing) nucleotides with our favourite hero. So despite our humble attempt at making a backronynm, we have named our program by the sound of Wolverine's claws being drawn - a metallic noise always written as "snikt".  
-**SNIKT - Slice Nucleotides Into Klassifiable Tequences**  
+### 5.1 Why the name SNIKT?
 
-Imagine the following:  
-> *Hey adpater, why don't you just back off...*  
->                                   - Wolverine  
+We at the University of Michigan are a huge Wolverine fan. So we couldn't pass an opportunity to relate our program that involves identifying (sniffing) and trimming (slashing) nucleotides with our favorite hero. So despite our humble attempt at making a backronym, we have named our program by the sound of Wolverine's claws being drawn - a metallic noise always written as "SNIKT!".
+
+**SNIKT - Slice Nucleotides Into Klassifiable Tequences** 
+
+Imagine the following:
+
+> *Hey adapter, why don't you just back off...*
+>
+> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; \- Wolverine
 
 And after a <img src="images/snikt_bubble.png" alt="SNIKT!" width="100"/> your read sequences are no longer sequences... they are tequences!
 
+### 5.2 Can this method be used for marker gene (16S) read data?
 
-#### 5.2 Can this method be used for marker gene (16S) read data?
 While this method can technically be used over marker gene sequencing data like the 16S, it is not always easy to pick out sequence over-representation patterns. Still, the adapter sequences are so alike that in our tests we could see a difference in real 16S sequence representation and adapters. That said, the problem will be harder when the community would be dominated by fewer taxonomies with higher similarity in their V3-V4 region of the 16S generally sequenced for such studies. On the other side, most 16S analysis platforms like mothur or QIIME2 have their own protocols for removing read contamination which works well. Adapters also have less of an impact over marker gene sequencing because at some point in the analysis, users align it to a database of marker genes of interest. Analysis protocols can choose to not look at any segments of the read that did not align and completely circumvent any adapter issues. This is not feasible for metagenomic sequencing as it is randomized over entire lengths of genomes in a community.
-
 
 ## 6. Citation
 
 A manuscript is under preparation for this project. Until then, please feel free to cite this project with its GitHub URL.
+
