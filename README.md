@@ -1,6 +1,6 @@
 # SNIKT
 
-
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/snikt/badges/installer/conda.svg)](https://anaconda.org/bioconda/snikt)
 
 **Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a wrapper program written in R that reports a visual confirmation of adapter or systemic contamination in metagenomic sequencing DNA or RNA reads and trims sequence ends to remove them. This program depends on [Seqtk](https://github.com/lh3/seqtk) for handling of fastq data, which is a fast, lightweight tool written in C.  
 
