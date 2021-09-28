@@ -259,7 +259,7 @@ ExtractCompositions <- function(buffer=seqtkBuffer, fractionHide=percHide){
 	
 	# Process the seqtk buffer, store and subset
 	colNames <- c("POS","bases","A","C","G","T","N","avgQ","errQ","low","high") #full list of columns in seqtk output
-	df <- read_delim(buffer,"\t",skip=3,col_names=colNames) #read leaving first 3 summary lines
+	df <- read_delim(I(buffer),"\t",skip=3,col_names=colNames,show_col_types = FALSE) #read leaving first 3 summary lines
 	df <- df[,1:8] #leave out last 3 unneccesary columns
 	
 	# Filter compositions by percentage of total bases
@@ -565,7 +565,7 @@ Options:
 # Dynamic modification of docString below Usage section results in usage errors
 docString <- sub("scriptPath",scriptPath,docString) #add script location with how it is fired
 # cat(docString)
-version <- '0.4.0'
+version <- '0.4.1'
 programVersion <- paste0("SNIKT ",version,"\n")
 # arg <- docopt(docString,version='SNIKT 0.2.0\n')
 arg <- docopt(docString,version=programVersion)

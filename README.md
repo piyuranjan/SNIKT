@@ -2,13 +2,13 @@
 
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/snikt/badges/installer/conda.svg)](https://anaconda.org/bioconda/snikt)
 
-**Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a wrapper program written in R that reports a visual confirmation of adapter or systemic contamination in metagenomic sequencing DNA or RNA reads and trims sequence ends to remove them. This program depends on [Seqtk](https://github.com/lh3/seqtk) for handling of fastq data, which is a fast, lightweight tool written in C.  
+**Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a program that reports a visual confirmation of adapter or systemic contamination in whole-genome shotgun (WGS) or metagenomic sequencing DNA or RNA reads and trims sequence ends to remove them. It works without prior information about the adapter sequence making it applilcable even when this information is unavailable. The program is written in R which allows for nice visual reports and uses [Seqtk](https://github.com/lh3/seqtk) in the back-end for handling of fastq data, which is a fast, lightweight tool written in C.
 
 This program is most suitable for long, variable-length reads, for example, from the Oxford Nanopore instruments. This is because read end trimming for long reads does not have a significant impact on the overall read throughput post-cleaning. This program has also been modified to accommodate short, fixed-length (Illumina) reads for identification of adapter contamination, however, end-trimming on such datasets is disabled by default.
 
 ## 1. Installation
 
-SNIKT is only available on Unix-like platforms (Linux, Mac OS and WSL). The easiest way to use SNIKT, in our opinion, is to use the Conda package management for set up. However, being a wrapper written in R, this program can also be used with a local R installation given it has access to `seqtk` and some R libraries. Both of these setup options are explained below.
+SNIKT is available on Unix-like platforms (Linux, Mac OS and WSL). The easiest way to use SNIKT, in our opinion, is to use the Conda package management for set up. However, being a wrapper written in R, this program can also be used with a local R installation given it has access to `seqtk` and some R libraries. Both of these setup options are explained below.
 
 ### 1.1 Installation via Bioconda
 
