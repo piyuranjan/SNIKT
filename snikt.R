@@ -333,7 +333,8 @@ RenderMd <- function(conn=mdConn, mdtxt=mdFile, mdhtml=mdReport, tmp=tmpDir, kee
 	# Returns:
 	#   None: Quits the program with a successful execution code 0.
 	
-	writeLines(paste0("---\n\n<br>\n\nReport created: ",Sys.time()),conn)
+	writeLines(paste0("---\n\n<br>\n\nTo see figures in larger view, open in new tab or save."),conn)
+	writeLines(paste0("\n\nReport created: ",Sys.time()),conn)
 	writeLines(paste0("\n\n",programVersion),conn)
 	close(conn) #close the connection to text markdown
 	if(verbose) cat(TimeDiff(time0),"Rendering report ... ")
@@ -565,7 +566,7 @@ Options:
 # Dynamic modification of docString below Usage section results in usage errors
 docString <- sub("scriptPath",scriptPath,docString) #add script location with how it is fired
 # cat(docString)
-version <- '0.4.1'
+version <- '0.4.2'
 programVersion <- paste0("SNIKT ",version,"\n")
 # arg <- docopt(docString,version='SNIKT 0.2.0\n')
 arg <- docopt(docString,version=programVersion)
