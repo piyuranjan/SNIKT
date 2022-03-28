@@ -23,7 +23,7 @@ After this installation, `mamba` can be used in the next step (and for managemen
 
 Now SNIKT can be set up in a new environment with the following command.
 
-`$ mamba create -n snikt snikt`
+`$ mamba create -n snikt snikt`
 
 or
 
@@ -90,7 +90,7 @@ The batch mode is useful when the user does not have the capacity to view the te
 
 When running in this mode, the process can also be parallelized for a large library of fastq files with command wrapping in GNU `parallel`. For example, the following command will run the first phase on all fastq files in a directory using `<n>` threads.
 
-`$ parallel -vkj<n> snikt.R -n {} ::: *.fastq.gz`
+`$ parallel -vkj<n> snikt.R -n {} ::: *.fastq.gz`
 
 This step will disable any cleanup process and will prepare a pre-QC report with a 6 panel graph. While this decision is only made with top 10K reads by default, users can use the entire dataset by specifying option `--skim=0`. Use this report to make a decision about trim and filter lengths.  
 
@@ -104,7 +104,7 @@ Once a decision is made, user can execute SNIKT again this time with pre-set tri
 
 Or if the trim criteria are same across all fastq, the command can be parallelized on `<n>` threads.
 
-`$ parallel -vkj<n> snikt.R -T 120 -t 25 -f 1000 {} ::: *.fastq.gz`
+`$ parallel -vkj<n> snikt.R -T 120 -t 25 -f 1000 {} ::: *.fastq.gz`
 
 This step will now clean up reads and will prepare a report pre- and post-cleanup similar to the one generated with the interactive mode. Note that the previous report file will be overwritten unless changed with the option `-o`. 
 
@@ -112,7 +112,7 @@ This step will now clean up reads and will prepare a report pre- and post-cleanu
 
 This program has been tested on the following system environments:
 
-- Windows Subsystem for Linux running Ubuntu 18.04 LTS
+- Windows Subsystem for Linux running Ubuntu 20.04 LTS
 - Ubuntu 18.04 LTS
 - CentOS 7 running on UM's ARC High Performance Compute cluster with SLURM scheduler.
 
@@ -134,18 +134,18 @@ SNIKT: FastQ QC and sequence over-representation check.
        A wrapper around seqtk to plot per-position nucleotide composition
        for finding and trimming adapter contamination in fastq reads.
        Also filters reads by a length threshold.
-Authors: Piyush Ranjan, Christopher Brown
+Authors Piyush Ranjan, Christopher Brown
 
 For first-time users, interactive mode is recommended.
 For detailed help and examples, please visit
 https://github.com/piyuranjan/SNIKT
 
-Location: /home/pr/miniconda3/envs/snikt/bin/snikt.R
+Location: scriptPath
 
 Usage:
   snikt.R [options] [--] <fastq>
   snikt.R <fastq>  # Interactive # Easiest
-  snikt.R [--zoom5=<nt> --zoom3=<nt>] <fastq>  # Interactive
+  snikt.R [--zoom5=<nt>] [--zoom3=<nt>] <fastq>  # Interactive
   snikt.R [(--trim5=<nt> --trim3=<nt>) | --notrim] <fastq>
   snikt.R [--illumina] [-n] <fastq>
 
@@ -169,19 +169,24 @@ Options:
                           improves speed. No effect on post-trim graphs.
                           Use 0 to disable skimming and utilize all reads.
                           [range: 0..maxFastqReads] [default: 10000]
+  -x, --xbreaks=<num>   Suggest number of ticks/breaks on x-axis in all graphs.
+                          Can be set if the breaks or gridlines are too sparse
+                          or dense to determine appropriate trimming. Internal
+                          algorithm adjusts ticks.
+                          [range: 1..10] [default: 6]
   -Z, --zoom5=<nt>      Zoom-in from aligned 5' beginning to nt bases.
                           [range: 1..maxSeqLen] [default:300]
   -z, --zoom3=<nt>      Zoom-in from aligned 3' ending to nt bases.
                           [range: 1..maxSeqLen] [default:100]
   QC:
+  -f, --filter=<nt>     Filter (drop) reads with length < nt after any trimming.
+                          [range: 0..maxSeqLen] [default:500]
   -n, --notrim          Disable positional trimming; useful for short-read data
                           Takes precedence over and sets: -T 0 -t 0
   -T, --trim5=<nt>      Trim nt bases from aligned 5' side.
                           [range: 0..(maxSeqLen-trim3)] [default: interactive]
   -t, --trim3=<nt>      Trim nt bases from aligned 3' side.
                           [range: 0..(maxSeqLen-trim5)] [default: interactive]
-  -f, --filter=<nt>     Filter (drop) reads with length < nt after any trimming.
-                          [range: 0..maxSeqLen] [default:500]
   IO:
   -o, --out=<prefix>    Prefix for output files [default: fastqNoExtension]
   -w, --workdir=<path>  Path to generate QC file and report. [default: ./]
@@ -191,7 +196,7 @@ Options:
                           supported within; prior decompression needed for any
                           other method.
   -k, --keep            Keep intermediate (temporary) directory.
-
+  
   Generic:
   -h, --help            Show help and exit 0.
   -v, --verbose         Enable status messages.

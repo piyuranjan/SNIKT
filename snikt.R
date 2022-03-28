@@ -24,7 +24,7 @@ scriptPath <- sub(fileArgName,"",initialOptions[grep(fileArgName,initialOptions)
 ### Functions ###
 #################
 
-AreaPlot <- function(df, zoomLen=NULL, trim=NULL, pad=0.025){
+AreaPlot <- function(df, zoomLen=NULL, trim=NULL, pad=0.025, xBreaks=6){
 	# Generate an area plot for given compositions per position.
 	#   Process either the full length or a zoom length (smaller x-axis) plot.
 	#   For full length plots, include average Phred base quality at each position and reads seen
@@ -36,6 +36,7 @@ AreaPlot <- function(df, zoomLen=NULL, trim=NULL, pad=0.025){
 	#   zoomLen(int): Length in NT to subset and fix x-axis positions. 3' or 5' determined later.
 	#   trim(int): Position at which to put a trim (vertical dashed) line suggesting trimming location.
 	#   pad(float): Left or right plot padding.
+	#   xBreaks(int): Number of breaks or ticks on x-axis for the plot.
 	# Returns:
 	#   ap(ggplot): A ggplot object containing elements for the composition plot.
 	
@@ -49,35 +50,66 @@ AreaPlot <- function(df, zoomLen=NULL, trim=NULL, pad=0.025){
 		geom_line(aes(y=bases/max(bases)*100),color="red") + #make normalized length freq as line
 		scale_y_continuous(labels=c(0,25,50,75,100),expand=c(pad,0), #adjust top/bottom plot padding
 			sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency",labels=FormatSI())) + #secondary axis uses SI scale
-		theme_bw() + #remove gray background
+		# theme_bw() + #remove gray background
+		theme_linedraw() +
 		theme(legend.position="none",title=element_blank(),axis.line=element_line(color="black"), #remove legend & titles; set axis colors
 			axis.line.y.right=element_line(color="red"),axis.ticks.y.right=element_line(color="red"),
 			axis.text.y.right=element_text(color="red"))
 	
-	# Set fill colors for 4NT
-	if(length(unique(df$nt))==5)
-		{ap <- ap + scale_fill_manual(values=c("#F8766D","#A3A500","#00BF7D","#00B0F6","#E76BF3"))} # "A", "G", "C", "T", "N"
-	else #assumes 2NT (length == 3)
-		{ap <- ap + scale_fill_manual(values=c("#00274C","#FFCB05","#E76BF3"))} # "AT", "GC", "N"
+	# Set fill colors and determine x-axis length
+	if(length(unique(df$nt))==5){  # condition for 4NT+1
+		ap <- ap + scale_fill_manual(
+			values = c("#F8766D","#A3A500","#00BF7D","#00B0F6","#E76BF3")  # fill order: "A", "G", "C", "T", "N"
+		)
+		maxX <- dim(df)[1]/5  # length of x-axis to which data is present for 4NT+1
+	} else{  # assume 2NT+1 (length == 3)
+		ap <- ap + scale_fill_manual(values=c("#00274C","#FFCB05","#E76BF3"))  # fill order: "AT", "GC", "N"
+		maxX <- dim(df)[1]/3  # length of x-axis to which data is present for 2NT+1
+	}
 	
 	# Condition to skip for zoom plots, return center plot.
 	if(is.null(zoomLen)){
-		ap <- ap + scale_x_continuous(expand=c(pad,0))+ #adjust left/right plot padding
+		ap <- ap + scale_x_continuous(
+			expand=c(pad,0),  # adjust left/right plot padding
+			breaks=BreaksWMax(scales::breaks_pretty(n=xBreaks),maxX)  # adjust x-axis breaks
+		)
 		return(ap) #return center plot
 	}
 	
 	# Positioned here to avoid null zoomLen comparison.
 	# From zoom argument, determine if forward or reverse scale applies
 	if(deparse(substitute(zoomLen))=="zoom5Len")
-		{ap <- ap + scale_x_continuous(expand=c(pad,0))} #adjust left/right plot padding
+		{ap <- ap + scale_x_continuous(expand=c(pad,0), breaks=scales::breaks_pretty(n=xBreaks))} #adjust left/right plot padding
 	else #assumes zoom3Len
-		{ap <- ap + scale_x_reverse(expand=c(pad,0))} #reverse x-axis, adjust left/right plot padding
+		{ap <- ap + scale_x_reverse(expand=c(pad,0), breaks=scales::breaks_pretty(n=xBreaks))} #reverse x-axis, adjust left/right plot padding
 	# Add dashed vertical line at trim position
 	if(!is.null(trim)){ap <- ap + geom_vline(xintercept=trim,linetype="dashed")}
 	return(ap) #return zoom plot
 }
 
-CreateGrid <- function(legendObj=legends, p1L=areaComp4Zoom5, p1R=areaComp4Zoom3, p2L=areaComp2Zoom5, p2R=areaComp2Zoom3, p1C=NULL, p2C=NULL, centerLen=NA){
+BreaksWMax <- function(originalFun = scales::breaks_pretty(), maxX){
+	# Add the max value of a graph to breaks.
+	# Parameters:
+	#   originalFun(function): a function call to scales::breaks_pretty()
+	#   maxX(int): max break on x-axis to put a tick
+	# Returns:
+	#   breaksSort: breaks in sorted order with a max value
+	
+	function(x){
+		originalBreaks <- originalFun(x)
+		# breaks <- c(originalBreaks, as.integer(max(x)))  # this max does not correspond to data on x-axis
+		breaks <- c(originalBreaks, as.integer(maxX))  # add max value to existing breaks
+		breaksSort <- sort(breaks)
+		# Remove any breaks that are less than 50 bp apart
+		close <- diff(breaksSort) < 50
+		breaksSort <- breaksSort[!close]
+		return(breaksSort)
+	}
+}
+
+CreateGrid <- function(
+	legendObj=legends, p1L=areaComp4Zoom5, p1R=areaComp4Zoom3, p2L=areaComp2Zoom5,
+	p2R=areaComp2Zoom3, p1C=NULL, p2C=NULL, centerLen=NA){
 	# Create and return a grid of 4 or 6 plots with axis labels and legends.
 	#   This step is the most time consuming as plot objects are finalized to pixels.
 	#   No change in plot objects is possible after execution of this function.
@@ -90,7 +122,7 @@ CreateGrid <- function(legendObj=legends, p1L=areaComp4Zoom5, p1R=areaComp4Zoom3
 	#   p2R(ggplot): A ggplot object containing 3' zoom plot positions for 2 NT combinations(AT,GC) + N.
 	#   p1C(ggplot): A ggplot object containing all positions for 4 NTs(A,T,G,C) + N.
 	#   p2C(ggplot): A ggplot object containing all positions for 2 NT combinations(AT,GC) + N.
-	#   centerLen(int): Length of the center plot with all positions.
+	#   centerLen(int): Length of the x-axis in center plot that has all positions.
 	# Returns:
 	#   (grid.arrange): Aligned grid with 4 or 6 plots, attached axis labels and legends.
 	
@@ -133,13 +165,22 @@ CreateLegend <- function(){
 	#   (object): A ggplot legend object
 	
 	# Make a dummy plot with display settings
-	g <- ggplot(data.frame(NT=fct_inorder(paste0("% ",c("A","G","C","T","AT","GC","N"))),N=1:7),aes(x=NT,y=N,fill=NT)) + 
+	g <- ggplot(
+			data.frame(NT=fct_inorder(paste0("% ",c("A","G","C","T","AT","GC","N"))),N=1:7),
+			aes(x=NT,y=N,fill=NT)
+		) + 
 		geom_col(alpha=0.75) + 
 		geom_line(aes(group=1,color="Average Phred Score  ")) +
 		geom_line(aes(y=(N-.5),group=1,color="Nucleotide Per Position")) + 
 		theme_bw() +
-		scale_color_manual(name=element_blank(),breaks=c("Average Phred Score  ","Nucleotide Per Position"),values=c("Average Phred Score  "="black","Nucleotide Per Position"="red")) + #create line legend
-		scale_fill_manual(values=c("#F8766D","#A3A500","#00BF7D","#00B0F6","#00274C","#FFCB05","#E76BF3")) + # "A", "G", "C", "T", "AT", "GC", "N" 
+		scale_color_manual(
+			name=element_blank(),
+			breaks=c("Average Phred Score  ","Nucleotide Per Position"),
+			values=c("Average Phred Score  "="black","Nucleotide Per Position"="red")
+		) + #create line legend
+		scale_fill_manual(
+			values=c("#F8766D","#A3A500","#00BF7D","#00B0F6","#00274C","#FFCB05","#E76BF3")  # "A", "G", "C", "T", "AT", "GC", "N" 
+		) +
 		guides(fill=guide_legend(title=NULL,order=1,nrow=1),color=guide_legend(order=2)) +
 		theme(legend.position="bottom")
 	# Extract the legend and return
@@ -482,11 +523,14 @@ TrimSeqParallel <- function(seqFile, trim5Len, trim3Len, proc=2, fqPerThread=100
 }
 #--- ---#
 
+
+
 ############
 ### Main ###
 ############
 
-# Status message that records time for libraries to load. Feel free to uncomment the following line if you want to see it.
+# Status message that records time for libraries to load. Feel free to uncomment
+#   the following line if you want to see it.
 # cat(TimeDiff(time0),"Libraries loaded\n")
 
 
@@ -534,19 +578,24 @@ Options:
                           improves speed. No effect on post-trim graphs.
                           Use 0 to disable skimming and utilize all reads.
                           [range: 0..maxFastqReads] [default: 10000]
+  -x, --xbreaks=<num>   Suggest number of ticks/breaks on x-axis in all graphs.
+                          Can be set if the breaks or gridlines are too sparse
+                          or dense to determine appropriate trimming. Internal
+                          algorithm adjusts ticks.
+                          [range: 1..10] [default: 6]
   -Z, --zoom5=<nt>      Zoom-in from aligned 5' beginning to nt bases.
                           [range: 1..maxSeqLen] [default:300]
   -z, --zoom3=<nt>      Zoom-in from aligned 3' ending to nt bases.
                           [range: 1..maxSeqLen] [default:100]
   QC:
+  -f, --filter=<nt>     Filter (drop) reads with length < nt after any trimming.
+                          [range: 0..maxSeqLen] [default:500]
   -n, --notrim          Disable positional trimming; useful for short-read data
                           Takes precedence over and sets: -T 0 -t 0
   -T, --trim5=<nt>      Trim nt bases from aligned 5' side.
                           [range: 0..(maxSeqLen-trim3)] [default: interactive]
   -t, --trim3=<nt>      Trim nt bases from aligned 3' side.
                           [range: 0..(maxSeqLen-trim5)] [default: interactive]
-  -f, --filter=<nt>     Filter (drop) reads with length < nt after any trimming.
-                          [range: 0..maxSeqLen] [default:500]
   IO:
   -o, --out=<prefix>    Prefix for output files [default: fastqNoExtension]
   -w, --workdir=<path>  Path to generate QC file and report. [default: ./]
@@ -566,11 +615,9 @@ Options:
 # Dynamic modification of docString below Usage section results in usage errors
 docString <- sub("scriptPath",scriptPath,docString) #add script location with how it is fired
 # cat(docString)
-version <- '0.4.2'
+version <- '0.4.3'
 programVersion <- paste0("SNIKT ",version,"\n")
-# arg <- docopt(docString,version='SNIKT 0.2.0\n')
 arg <- docopt(docString,version=programVersion)
-# arg<-docopt(docString,strict=TRUE,version='SNIKT 0.2.0\n')
 # print(arg)
 
 # Read only verbose and debug from user first. The earlier these are set the better.
@@ -640,7 +687,8 @@ if(!is.null(arg$hide)){ #percent bases to hide from 3'. Avoids rendering noise a
 if(debug) write(paste0("DEBUG: After parsing preset values:\t-Z=",zoom5Len,"\t-z=",zoom3Len,"\t-f=",filterLen,"\t--hide=",percHide,"\n"),stderr())
 
 # Graphing variables
-headFastq <- as.integer(arg$skim) #use only top (head) reads for initial inference.
+headFastq <- as.integer(arg$skim)  # use only top (head) reads for initial inference
+xBreaks <- as.integer(arg$xbreaks)  # add x-axis breaks/ticks for all graphs
 
 # print(arg)
 # q("no",0,FALSE)
@@ -687,6 +735,7 @@ if(grepl("\\.gz(ip)?$",seqFile)) isFqGz <- TRUE #override isGzip if extension fo
 if(percHide>1|percHide<0){stop("ERR: --hide out of range.")}
 if(percHide>0.5){write(paste0("WARN: Hiding too much sequence data is not recommended. --hide is currently: ",percHide),stderr())}
 if(headFastq<0){stop("ERR: -s out of range, needs to be a positive number.")}
+if(xBreaks<0){stop("ERR: -x out of range, needs to be a positive number.")}
 if(zoom5Len<1|zoom3Len<1){stop("ERR: -Z or -z out of range.")}
 if(((arg$trim5=="interactive")&(arg$trim3!="interactive"))|((arg$trim5!="interactive")&(arg$trim3=="interactive"))){ #warning on only setting one trim length
 	write(paste0("WARN: Only one trim length is set. Forcing interactive mode."),stderr())
@@ -701,6 +750,8 @@ if(filterLen<0){stop("ERR: -f out of range.")}
 # }
 
 if(verbose) cat(TimeDiff(time0),"Libraries loaded and user parameters set\n")
+# q('no',0,FALSE)  # user parameters have been set at this point
+
 
 # Setup workspace variables
 dir.create(tmpDir)
@@ -784,7 +835,7 @@ revComp2 <- pivot_longer(revComp,names_to="nt",values_to="composition",c(AT,GC,N
 ## Generate graph objects for 1st round ##
 
 # Process full compositions for center plots. Pushed to --noTrim condition.
-# areaComp4 < -AreaPlot(rawComp4)
+# areaComp4 <- AreaPlot(rawComp4)
 # areaComp2 <- AreaPlot(rawComp2)
 # Process 5' end compositions for left zoomed-in plots
 areaComp4Zoom5 <- AreaPlot(rawComp4,zoom5Len)
@@ -810,8 +861,8 @@ if(!is.na(trim5Len) & !is.na(trim3Len) & trim5Len==0 & trim3Len==0){
 	if(verbose) cat(TimeDiff(time0),"Preparing graphs without trimming ... ")
 	timeStep <- Sys.time()
 	# Process full compositions for center plots
-	areaComp4 <- AreaPlot(rawComp4)
-	areaComp2 <- AreaPlot(rawComp2)
+	areaComp4 <- AreaPlot(rawComp4,xBreaks=xBreaks)
+	areaComp2 <- AreaPlot(rawComp2,xBreaks=xBreaks)
 	areaLen <- dim(rawComp4)[1]/5
 	noTrimGrid <- CreateGrid(legends,areaComp4Zoom5,areaComp4Zoom3,areaComp2Zoom5,areaComp2Zoom3,areaComp4,areaComp2,areaLen)
 	noTrimFile <- paste0(tmpDir,"/",outPrefix,"-noTrim.png")
@@ -933,8 +984,8 @@ revComp2 <- pivot_longer(revComp,names_to="nt",values_to="composition",c(AT,GC,N
 if(verbose) cat(TimeDiff(time0),"Preparing graphs post-trimming ... ")
 timeStep <- Sys.time()
 # Process full compositions for center plots.
-areaComp4 <- AreaPlot(rawComp4)
-areaComp2 <- AreaPlot(rawComp2)
+areaComp4 <- AreaPlot(rawComp4,xBreaks=xBreaks)
+areaComp2 <- AreaPlot(rawComp2,xBreaks=xBreaks)
 # Process 5' end compositions for left zoomed-in plots
 areaComp4Zoom5 <- AreaPlot(rawComp4,zoom5Len)
 areaComp2Zoom5 <- AreaPlot(rawComp2,zoom5Len)
