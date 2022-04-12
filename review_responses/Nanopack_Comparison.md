@@ -1,17 +1,18 @@
-# Comparison w Nanopack tools
-Created: 2022-04-08
+# Comparison with Nanopack tools
+Created: 2022-04-08  
 Author: Piyush Ranjan
 
 ---
 
-Tmp Location: `WD2` (`\\wsl$\Ubuntu\home\pr\WD\\wsl$\Ubuntu\home\pr\WD\WD2`)
-Location: `$PWD/Nanopack_Comparison/`
+Local Location: `$PWD/Nanopack_Comparison/` (disregard on GitHub)
 
 In response to reviewer comments, we compared the performance of SNIKT with two popular tools for Nanopore QC - [NanoQC](https://github.com/wdecoster/nanoQC) and [NanoFilt](https://github.com/wdecoster/nanofilt) that are from the [NanoPack](https://github.com/wdecoster/nanopack) ([DOI](https://doi.org/10.1093/bioinformatics/bty149)) suite of tools.
 
+<br>
+
 ## Test setup
 ### Dataset
-The dataset used for this comparison is the same SRA run that is used in the main paper. This sequencing run is a WGS long-read Nanopore run with 9.4.1 pore chemistry for HMW DNA extraction from Candida albicans CHN1 which was prepared with the SQK-RAD004 rapid DNA library preparation.
+The dataset used for this comparison is the same SRA run ([Garg et al. 2021](https://doi.org/10.1128/MRA.00299-21)) that is used in the main paper. This sequencing run is a WGS long-read Nanopore run with 9.4.1 pore chemistry for HMW DNA extraction from Candida albicans CHN1 which was prepared with the SQK-RAD004 rapid DNA library preparation. Following are basic summary statistics from this fastq.
 ```_
 $ summarizeFastq.pl SRR13441294.fastq.gz
 #Dataset        #Reads  #Bases  #MinLen #MaxLen #AvgLen #AvgQ   #AvgA   #AvgC   #AvgG   #AvgT   #AvgN
@@ -74,10 +75,11 @@ $ alias recordStats
 alias recordStats='/usr/bin/time -f "\nCommand stats:\nProc:\tElapsed Time = %E,\tAvg CPU = %P,\nMem:\tAvg Total Mem = %KKB,\tPeak Mem = %MKB,\nDisk:\tIn = %I,\tOut =%O\nExit Status: %x"'
 ```
 
+<br>
 
 ## Comparison with NanoQC
-### NanoQC Default `--minlen`
-Executing NanoQC without `--minlen` as the description seems to suggest it will filter reads when making a QC report.
+### NanoQC default `--minlen` execution
+NanoQC was executed without `--minlen` as the description seems to suggest it will filter reads before making a QC report.
 ```_
 $ recordStats nanoQC SRR13441294.fastq.gz
 BokehDeprecationWarning: plot_width and plot_height was deprecated in Bokeh 2.4.0 and will be removed, use width or height instead.
@@ -88,18 +90,18 @@ Mem:    Avg Total Mem = 0KB,    Peak Mem = 1759732KB,
 Disk:   In = 0, Out =144
 Exit Status: 0
 ```
-Following is the report that was generated.
-![](_attach/nanoQC.html)
+Following report was generated. Download locally to see.  
+[NanoQC Report: ./\_attach/nanoQC.html](_attach/nanoQC.html)
 
 Results suggest the following.
-- The default for `--minlen` was taken as 200 and the method did filter reads smaller than that. It made graphs for a 100 bp window from each end. This means that the package necessitates the coupling between the viewing window and the read length filter removing a true representation of the original file before plotting it. The log suggested that it used 411060 reads instead of the original 412984 which leaves 1924 reads outside of the initial representation.
+- The default for `--minlen` was taken as 200 and the method did filter reads smaller than that. It made graphs for a 100 bp window from each end. This means that this package necessitates a coupling between the viewing window and the read length filter removing a true representation of the original file before plotting it. This could be detrimental if the fastq file has a higher fraction of small reads. The log suggested that it used 411060 reads instead of the original 412984 which leaves 1924 reads outside of the initial representation.
 - The graphing step took about 18.5 minutes working over a single thread. This application is not multi threaded (neither is SNIKT).
 - While addressable, some graphs are not labelled.
 	- While the graphs are interactive, the data drawn on them is fixed. It limits the interactivity to only zooming in. At the same time, zooming in happens at both axis simultaneously, which defeats the purpose of zooming in entirely since the y-axis needs to be scaled to understand the graph.
-	- The frequency length graph is set to have the same axis in SNIKT, which allows the user to make a simultaneous decision on how much throughput they would waste at different levels of trimming along with choosing an appropriate criteria using the nucleotide compositions and the Phred scores.
+	- The frequency length graph is set as a separate graph in NanoQC report. In SNIKT, this graph is embedded with compositions and Phred score on the same x-axis, which allows the user to make a simultaneous decision on how much throughput they would waste at different levels of trimming along with choosing an appropriate criteria using the nucleotide compositions and the Phred scores.
 
 
-### SNIKT `--notrim`
+### SNIKT `--notrim` execution
 SNIKT was run with its `-n, --notrim` parameter so it makes a report for initial analysis of the adapter and low quality bases in the fastq. This behavior is analogous to how NanoQC works.
 While SNIKT defaults to using top 10,000 reads for its graphs for a significantly faster assessment, to make the comparison fair, we also used the `-s, --skim`  parameter which enables the user to force SNIKT to use the entire file for graphing.
 Default parameters for 5' and 3' zoom criteria were used but they can be modified to the values more suitable for adapter assessment using `-Z, --zoom5` and `-z, --zoom3` flags. Filtering reads at this step is by design disabled, so using `-f, --filter` will have no effect as SNIKT is only making an estimation and we think it is important to be able to get an accurate representation of the fastq.
@@ -113,17 +115,18 @@ Mem:    Avg Total Mem = 0KB,    Peak Mem = 757896KB,
 Disk:   In = 160488,    Out =95088
 Exit Status: 0
 ```
-Following was the report that was generated.
-![](_attach/SRR13441294_notrim.html)
+Following report was generated. Download locally to see.  
+[SNIKT pre-trim report: ./\_attach/SRR13441294_notrim.html](_attach/SRR13441294_notrim.html)
 
 Results suggest the following.
-- Unlike NanoQC, SNIKT took the entire fastq into consideration without any filters. The default x-axis sizes are set for long-read shotgun sequencing, so they work very well in showing the poor quality bases and adapter contamination in an easy view, so that the user can determine where to make their trims. The left and the right panels also demonstrate negligible loss in number of reads (using read frequency) when making a trim at, what we see appropriate, 100 bp from 5' and 20 bp from 3' for this set. The graph is a vector image that can be opened in a bigger view if desired in a new tab or can be saved to zoom in. However, the zoom in will have similar limitations as NanoQC as both axes will zoom together.
-- The graphing step took about 4.3 minutes to complete working a little over than a single thread. This implementation is not multi-threaded so the performance is expected to be similar in other invocations. Here again, SNIKT by default, provides an option to speed this step further with looking at top 10,000 reads, in case the user is making an assessment for a significantly larger set. This can be configured by the user as well with the `-s` flag.
+- Unlike NanoQC, SNIKT took the entire fastq into consideration without any filters. The default x-axis windows sizes are optimized for long-read shotgun sequencing. They work very well in showing the poor quality bases and adapter contamination in an easy view, so that the user can determine where to make their trims. The left and the right panels also demonstrate negligible loss in number of reads (using read frequency) when making trims at, what we see appropriate, 100 bp from 5' and 20 bp from 3' for this set. The graph is a vector image that can be opened in a bigger view if desired in a new tab or can be saved to zoom in. However, the zoom in will have similar limitations as NanoQC as both axes will zoom together.
+- The graphing step took about 4.3 minutes (NanoQC took 18.5 min) to complete working a little over than a single thread. This implementation is not multi-threaded so the performance is expected to be similar in other invocations. Here again, SNIKT by default, provides an option to speed this step further with looking at top 10,000 reads, in case the user is making an assessment for a significantly larger set. This can be configured by the user as well with the `-s` flag.
 - All graphs presented in the report are well labelled and annotated.
 
+<br>
 
 ## Comparison with NanoFilt
-### NanoFilt
+### NanoFilt execution
 The filtering criteria is set to remove any reads below 500 bp and trim by 100 bp from 5' and 20 bp from 3'.
 NanoFilt does not read in gzipped fastq files, so a prior decompression is needed.  Since this makes NanoFilt a piped command, it was encapsulated for execution in a script so that the `/usr/bin/time` utility can capture its usage.
 ```_
@@ -147,23 +150,11 @@ A filtered fastq file was generated from this process. No report was generated.
 
 Results suggest the following.
 - The process of trimming and filtering took about 7.2 minutes.
-- The resulting data has no statistics generated with is. This means, additional steps might be needed to add a validation or statistical check for the resulting reads. This might add more time and resource usage.
+- The resulting data has no statistics generated with it. This means, additional steps might be needed to add a validation or statistical check for the resulting reads. This might add more time and resource usage.
 
-### SNIKT
+### SNIKT execution
 The filtering criteria is set to remove any reads below 500 bp and trim by 100 bp from 5' and 20 bp from 3'.
 SNIKT defaults to making a report using pre- and post-trim fastq data. These steps become significant in fraction of time and resources used for the procedure. So, here we ran SNIKT with verbosity that shows time taken by each step.
-```_
-$ recordStats ./snikt.R --filter=500 --trim5=100 --trim3=20 -o SRR13441294_trim_snikt SRR13441294.fastq.gz
-SNIKT cleaned reads are available in:  /home/pr/WD/WD2/SRR13441294_trim_snikt.fastq
-SNIKT contamination report is available in: /home/pr/WD/WD2/SRR13441294_trim_snikt.html
-
-Command stats:
-Proc:   Elapsed Time = 4:14.37, Avg CPU = 131%,
-Mem:    Avg Total Mem = 0KB,    Peak Mem = 759584KB,
-Disk:   In = 119280,    Out =19097272
-Exit Status: 0
-```
-
 ```_
 $ recordStats ./snikt.R -v --filter=500 --trim5=100 --trim3=20 -o SRR13441294_trim_snikt SRR13441294.fastq.gz
 [1s] Libraries loaded and user parameters set
@@ -186,8 +177,8 @@ Mem:    Avg Total Mem = 0KB,    Peak Mem = 764692KB,
 Disk:   In = 0, Out =19097272
 Exit Status: 0
 ```
-A filtered fastq as well as the following trimming report was generated from this process.
-![](_attach/SRR13441294_trim_snikt.html)
+A filtered fastq as well as the following trimming report was generated from this process. Download locally to see.  
+[SNIKT post-trim report: \_attach/SRR13441294_trim_snikt.html](_attach/SRR13441294_trim_snikt.html)
 
 Results suggest the following.
 - The entire process, including the report generation steps, finished in about 4.4 minutes. This is significantly faster than 7.2 minutes taken by NanoFilt.
