@@ -46,7 +46,8 @@ AreaPlot <- function(df, zoomLen=NULL, trim=NULL, pad=0.025, xBreaks=6){
 	
 	ap <- ggplot(df,aes(x=POS,y=composition,fill=nt)) +
 		geom_area(alpha=0.75) + #area plot; lowered alpha to see gridlines
-		geom_line(aes(y=avgQ),color="black",alpha=0.75) + #avg Phred score
+		# geom_line(aes(y=avgQ),color="black",alpha=0.75) + #avg Phred score
+		geom_line(aes(y=errQ),color="black",alpha=0.75) +  # use errQ instead of avgQ as better Q estimator
 		geom_line(aes(y=bases/max(bases)*100),color="red") + #make normalized length freq as line
 		scale_y_continuous(labels=c(0,25,50,75,100),expand=c(pad,0), #adjust top/bottom plot padding
 			sec.axis=sec_axis(~.*max(df$bases)/100,name="Frequency",labels=FormatSI())) + #secondary axis uses SI scale
@@ -266,7 +267,8 @@ ExtractSummary <- function(buffer=seqtkBuffer){
 	if(length(str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]]) == 3){
 		summ1 <- str_extract_all(buffer[1],"(?<=:\\s)\\d+\\.?\\d*")[[1]] %>%
 			setNames(c("Min Length","Max Length","Avg Length"))
-		summ2 <- str_split(buffer[3],"\t")[[1]][2:8] %>%
+		# summ2 <- str_split(buffer[3],"\t")[[1]][2:8] %>%
+		summ2 <- str_split(buffer[3],"\t")[[1]][c(2,3,4,5,6,7,9)] %>%  # read errQ as average quality
 			setNames(c("Num Bases","A","C","G","T","N","Avg Q"))
 		summ3 <- str_split(buffer[4],"\t")[[1]][2] %>%
 			setNames("Num Seq")
@@ -301,7 +303,8 @@ ExtractCompositions <- function(buffer=seqtkBuffer, fractionHide=percHide){
 	# Process the seqtk buffer, store and subset
 	colNames <- c("POS","bases","A","C","G","T","N","avgQ","errQ","low","high") #full list of columns in seqtk output
 	df <- read_delim(I(buffer),"\t",skip=3,col_names=colNames,show_col_types = FALSE) #read leaving first 3 summary lines
-	df <- df[,1:8] #leave out last 3 unneccesary columns
+	# df <- df[,1:8] #leave out last 3 unneccesary columns
+	df <- df[,1:9] #leave out last 2 unneccesary columns
 	
 	# Filter compositions by percentage of total bases
 	subdf <- df[nrow(df):1,1:2] %>% #subset cols 1,2 and reverse rows
@@ -615,7 +618,7 @@ Options:
 # Dynamic modification of docString below Usage section results in usage errors
 docString <- sub("scriptPath",scriptPath,docString) #add script location with how it is fired
 # cat(docString)
-version <- '0.4.3'
+version <- '0.5.0'
 programVersion <- paste0("SNIKT ",version,"\n")
 arg <- docopt(docString,version=programVersion)
 # print(arg)
