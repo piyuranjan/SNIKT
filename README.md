@@ -2,7 +2,7 @@
 
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/snikt/badges/installer/conda.svg)](https://anaconda.org/bioconda/snikt)
 
-**Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a program that reports a visual confirmation of adapter or systemic contamination in whole-genome shotgun (WGS) or metagenomic sequencing DNA or RNA reads and trims sequence ends to remove them. It works without prior information about the adapter sequence making it applilcable even when this information is unavailable. The program is written in R which allows for nice visual reports and uses [Seqtk](https://github.com/lh3/seqtk) in the back-end for handling of fastq data, which is a fast, lightweight tool written in C.
+**Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a program that reports a visual confirmation of adapter or systemic contamination in whole-genome shotgun (WGS) or metagenomic sequencing DNA or RNA reads and based on user input, trims sequence ends to remove them. It works without prior information about the adapter sequence making it applilcable even when this information is unavailable. The program is written in R which allows for nice visual reports and uses [Seqtk](https://github.com/lh3/seqtk) in the back-end for handling of fastq data, which is a fast, lightweight tool written in C.
 
 This program is most suitable for long, variable-length reads, for example, from the Oxford Nanopore instruments. This is because read end trimming for long reads does not have a significant impact on the overall read throughput post-cleaning. This program has also been modified to accommodate short, fixed-length (Illumina) reads for identification of adapter contamination, however, end-trimming on such datasets is disabled by default.
 
@@ -119,11 +119,11 @@ This program has been tested on the following system environments:
 This program has been tested with the following dependencies and their versions. We recommend using listed versions or higher for these dependencies.
 
 - seqtk 1.3 [https://github.com/lh3/seqtk](https://github.com/lh3/seqtk)
-- R 4.0.3 [https://www.r-project.org/](https://www.r-project.org/) [direct download](https://cloud.r-project.org/) with the following libraries.
-  - tidyverse 1.3.0
+- R 4.1.2 [https://www.r-project.org/](https://www.r-project.org/) [direct download](https://cloud.r-project.org/) with the following libraries.
+  - tidyverse 1.3.1
   - gridExtra 2.3
   - docopt 0.7.1
-  - lubridate 1.7.10
+  - lubridate 1.8.0
 
 ## 4. Full command line help
 
@@ -196,7 +196,7 @@ Options:
                           supported within; prior decompression needed for any
                           other method.
   -k, --keep            Keep intermediate (temporary) directory.
-  
+
   Generic:
   -h, --help            Show help and exit 0.
   -v, --verbose         Enable status messages.
