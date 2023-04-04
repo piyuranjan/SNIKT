@@ -1,5 +1,6 @@
 # SNIKT
 
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/snikt/README.html)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/snikt/badges/version.svg)](https://anaconda.org/bioconda/snikt) [![Anaconda-Server Badge](https://anaconda.org/bioconda/snikt/badges/downloads.svg)](https://anaconda.org/bioconda/snikt)
 
 **Snikt** (**Slice Nucleotides Into Klassifiable Tequences**) is a program that reports a visual confirmation of adapter or systemic contamination in whole-genome shotgun (WGS) or metagenomic sequencing DNA or RNA reads and based on user input, trims sequence ends to remove them. It works without prior information about the adapter sequence making it applilcable even when this information is unavailable. The program is written in R which allows for nice visual reports and uses [Seqtk](https://github.com/lh3/seqtk) in the back-end for handling of fastq data, which is a fast, lightweight tool written in C.
